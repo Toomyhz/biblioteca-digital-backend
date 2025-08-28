@@ -1,37 +1,53 @@
-import requests
-from flask import jsonify
-id_cliente = "1069979014769-6rp1isa3hqb50188pbjhmrd0gm3093q0.apps.googleusercontent.com"
-secreto_cliente = "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"
-redirect_uri = "http://localhost:5173/login/callback"
+from flask import jsonify,make_response
+from .services import obtener_token, obtener_informacion_usuario
+from app.models.user import User
+from app import db
+from app.tokens.services import generar_access_token, generar_refresh_token
 
-token_url = 'https://oauth2.googleapis.com/token'
+
 def login_controller(code):
-    data = {
-        'code': code,
-        'client_id': id_cliente,
-        'client_secret': secreto_cliente,
-        'redirect_uri': redirect_uri,
-        'grant_type': 'authorization_code'
-    }
-    try:
-        response = requests.post(token_url, data=data)
-        response_data = response.json()
 
-        if response.status_code != 200 or 'access_token' not in response_data:
-            return {'error': 'Failed to obtain access token'}, 400
-        
-        access_token = response_data['access_token']
-        user_info_url = 'https://www.googleapis.com/oauth2/v2/userinfo'
-        user_info_response = requests.get(user_info_url, headers={'Authorization': f'Bearer {access_token}'})
-        user_info = user_info_response.json()
+    # Obtener el token de acceso utilizando el código de autorización
+    access_token, error = obtener_token(code)
+    if error:
+        return jsonify(error), 400
+    
+    # Obtener la información del usuario utilizando el token de acceso
+    user_info, error = obtener_informacion_usuario(access_token)
+    if error:
+        return jsonify(error), 400
+    
+    # Validar correo permitido
+    # if not user_info['email'].endswith('@umce.cl'):
+    #     return jsonify({'error': 'Correo no permitido'}), 403
 
-        if user_info_response.status_code != 200:
-            return {'error': 'Failed to obtain user info'}, 400
-        
-        if user_info['hd'] not in ['duocuc.cl']:
-            return {'error': 'El correo no pertenece a la institución'}, 400
-        
-        return jsonify({'message': 'Autenticación exitosa', 'user_info': user_info})
-    except requests.exceptions.RequestException as e:
-        return {'error': str(e)}, 500
+    existing_user = User.query.filter_by(google_id=user_info['id']).first()
+
+    if existing_user:
+        access_token = generar_access_token(existing_user)
+        refresh_token = generar_refresh_token(existing_user)
+        return jsonify({'message': 'Usuario ya existe', 'access_token':access_token, 'refresh_token':refresh_token}), 200
+    
+    # Crear un nuevo usuario si no existe
+    new_user = User(
+         google_id = user_info['id'],
+         email = user_info['email'],
+         nombre = user_info.get('name', 'Sin nombre'),
+         id_rol = 1
+    ) 
+
+    db.session.add(new_user)
+    db.session.commit()
+
+    access_token = generar_access_token(new_user)
+    refresh_token = generar_refresh_token(new_user)
+    resp = make_response(jsonify({'message': 'Login exitoso'}))
+    # Cambiar secure a True si se usa HTTPS
+    resp.set_cookie('access_token', access_token, httponly=False, secure=False, samesite='Lax')
+    resp.set_cookie('refresh_token', refresh_token, httponly=False, secure=False, samesite='Lax')
+    return resp, 200
+    
+
+
+
     

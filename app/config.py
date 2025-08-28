@@ -1,8 +1,19 @@
+from dotenv import load_dotenv
+import os
+
+
+# Cargar las variables de entorno desde el archivo .env
+load_dotenv()
+
 class Config:
+    
     SQLARCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = "BibliotecaDigital_Umce_2025."
-    GOOGLE_CLIENT_ID = "1069979014769-6rp1isa3hqb50188pbjhmrd0gm3093q0.apps.googleusercontent.com"
-    GOOGLE_CLIENT_SECRET = "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"
+    SECRET_KEY = os.getenv("SECRET_KEY")
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+    REDIRECT_URI = os.getenv("redirect_uri")
+    TOKEN_URL = os.getenv("TOKEN_URL")
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -12,3 +23,4 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
     SQLALCHEMY_ECHO = True
+
