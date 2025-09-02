@@ -1,6 +1,6 @@
 from flask import jsonify,make_response
 from .services import obtener_token, obtener_informacion_usuario
-from app.models.user import User
+from app.models.usuarios import Usuarios as User
 from app import db
 from app.tokens.services import generar_access_token, generar_refresh_token
 

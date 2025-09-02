@@ -17,9 +17,11 @@ def create_app():
 
     # Importación Blueprints
     from app.auth.routes import auth_bp
-    from app.books.routes import book_bp
+    from app.api.libros.routes import libro_bp
+    from app.api.autores.routes import autor_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(book_bp, url_prefix='/api/books')
+    app.register_blueprint(libro_bp, url_prefix='/api/libros')
+    app.register_blueprint(autor_bp, url_prefix='/api/autores')
     
     CORS(app,origins=["http://localhost:5173"],supports_credentials=True)
 
@@ -31,9 +33,11 @@ def create_app():
         response.headers['Cross-Origin-Embedder-Policy'] = 'require-corp'
         return response
 
-    from app.models.user import User
-    from app.models.role import Role
-    from app.models.book import Book
+    from app.models.usuarios import Usuarios
+    from app.models.roles import Rol
+    from app.models.carreras import Carreras
+    from app.models.autores import Autores
+    from app.models.libros import Libro
 
     return app
 
