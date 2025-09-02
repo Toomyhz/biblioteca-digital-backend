@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-import os
+import os, secrets
 
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
@@ -38,9 +38,10 @@ class DevelopmentConfig(Config):
     f"?config_dir={TNS_ADMIN}&wallet_location={TNS_ADMIN}"
     + (f"&wallet_password={WALLET_PASSWORD}" if WALLET_PASSWORD else "")
 )
-
-
-
+    SESSION_TYPE = 'filesystem'
+    SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
+    SESSION_PERMANENT = False
+    SESSION_USE_SIGNER = True
 
 class TestingConfig(Config):
     TESTING = True
