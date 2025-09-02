@@ -3,22 +3,30 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from app.config import DevelopmentConfig
 from flask_cors import CORS
-
+from flask_session import Session
+import redis
+from sqlalchemy import create_engine
+import os
 
 db = SQLAlchemy()
 migrate = Migrate()
+session = Session()
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
+    session.init_app(app)
+    tns = app.config.get("TNS_ADMIN")
+    if tns:
+        os.environ["TNS_ADMIN"] = tns
 
     db.init_app(app)
     migrate.init_app(app, db)
 
     # Importación Blueprints
-    from app.auth.routes import auth_bp
     from app.api.libros.routes import libro_bp
     from app.api.autores.routes import autor_bp
+    from app.api.auth.routes import auth_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(libro_bp, url_prefix='/api/libros')
     app.register_blueprint(autor_bp, url_prefix='/api/autores')
