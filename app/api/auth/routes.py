@@ -1,11 +1,7 @@
 from flask import Blueprint, request, jsonify, redirect 
 from .controllers import login_controller
 import jwt
-from app.config import Config
 from app.api.auth.auth import token_required
-
-ID_CLIENT='1069979014769-6rp1isa3hqb50188pbjhmrd0gm3093q0.apps.googleusercontent.com'
-SECRET_CLIENT='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'
 
 auth_bp = Blueprint('auth', __name__)
 

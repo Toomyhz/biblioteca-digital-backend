@@ -15,9 +15,9 @@ session = Session()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
-    os.environ["TNS_ADMIN"] = DevelopmentConfig.TNS_ADMIN
-
-    
+    tns = app.config.get("TNS_ADMIN")
+    if tns:
+        os.environ["TNS_ADMIN"] = tns
 
     db.init_app(app)
     migrate.init_app(app, db)
