@@ -3,10 +3,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from app.config import DevelopmentConfig
 from flask_cors import CORS
+from flask_session import Session
+import redis
 
 
 db = SQLAlchemy()
 migrate = Migrate()
+session = Session()
 
 def create_app():
     app = Flask(__name__)
@@ -16,7 +19,7 @@ def create_app():
     migrate.init_app(app, db)
 
     # Importación Blueprints
-    from app.auth.routes import auth_bp
+    from app.api.auth.routes import auth_bp
     from app.books.routes import book_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(book_bp, url_prefix='/api/books')
