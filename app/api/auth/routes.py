@@ -1,13 +1,23 @@
-from flask import Blueprint, request, jsonify, redirect 
+from flask import Blueprint, request, jsonify, redirect , session
 from .controllers import login_controller
-import jwt
 from app.api.auth.auth import token_required
+
+from services import (
+    _build_google_auth_url,
+    _exchange_code_for_tokens,
+    _verify_id_token,
+    _require_domain
+)
 
 auth_bp = Blueprint('auth', __name__)
 
+
+
 @auth_bp.route('/login/', methods=['GET'])
 def login():
-    return jsonify({"message": "Login successful"})
+    # Limpiar estados antiguos
+    session.pop("user_id", None)
+    return redirect(_build_google_auth_url())
 
 @auth_bp.route('/login/callback', methods=['POST'])
 def callback():
@@ -19,19 +29,6 @@ def callback():
     else:
         return jsonify({'error': 'No authorization code provided'}), 400
 
-@auth_bp.route('/validate', methods=['GET'])
-def validate_token():
-    print("Validando token..")
-    access_token = request.cookies.get('access_token')
-    if not access_token:
-        return jsonify({'authenticated': False}), 401
-    try:
-        payload = jwt.decode(access_token, Config['SECRET_KEY'], algorithms=['HS256'])
-        return jsonify({'authenticated': True, 'user_id': payload['sub']}), 200
-    except jwt.ExpiredSignatureError:
-        return jsonify({'authenticated': False}), 401
-    except jwt.InvalidTokenError:
-        return jsonify({'authenticated': False}), 401
 
 @auth_bp.route('/logout', methods=['POST'])
 def logout():

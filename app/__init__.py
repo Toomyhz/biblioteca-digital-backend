@@ -15,6 +15,7 @@ session = Session()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
+    session.init_app(app)
     tns = app.config.get("TNS_ADMIN")
     if tns:
         os.environ["TNS_ADMIN"] = tns

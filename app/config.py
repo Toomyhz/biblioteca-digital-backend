@@ -7,8 +7,7 @@ load_dotenv()
 class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SECRET_KEY = os.getenv("SECRET_KEY")
-    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+    
     REDIRECT_URI = os.getenv("redirect_uri")
     TOKEN_URL = os.getenv("TOKEN_URL")
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
@@ -20,6 +19,7 @@ class DevelopmentConfig(Config):
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
     OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI")
+    ALLOWED_EMAIL_DOMAINS = os.getenv("ALLOWED_EMAIL_DOMAINS")
 
     #Ruta Wallet
     TNS_ADMIN = os.getenv("TNS_ADMIN")
