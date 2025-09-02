@@ -5,7 +5,8 @@ from app.config import DevelopmentConfig
 from flask_cors import CORS
 from flask_session import Session
 import redis
-
+from sqlalchemy import create_engine
+import os
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -14,6 +15,9 @@ session = Session()
 def create_app():
     app = Flask(__name__)
     app.config.from_object(DevelopmentConfig)
+    os.environ["TNS_ADMIN"] = DevelopmentConfig.TNS_ADMIN
+
+    
 
     db.init_app(app)
     migrate.init_app(app, db)
