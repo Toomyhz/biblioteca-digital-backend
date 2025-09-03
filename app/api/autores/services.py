@@ -1,19 +1,18 @@
 from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
 from app import db
-from flask import jsonify
 
 def agregar_autor_service(data):
-    nombre = data.get("nombre")
-    if not nombre:
-        return jsonify({'error': 'El nombre del autor es obligatorio'}), 400
-    slug = generar_slug(nombre)
+    nombre_completo = data.get("new_nombre")
+    if not nombre_completo:
+        return {'error': 'El nombre del autor es obligatorio'}, 400
+    slug_autor = generar_slug(nombre_completo)
     
     nuevo_autor = Autores(
-        nombre=nombre,
-        nacionalidad=data.get("nacionalidad"),
-        slug=slug
+        nombre_completo=nombre_completo,
+        nacionalidad=data.get("new_nacionalidad"),
+        slug_autor=slug_autor
     )
     db.session.add(nuevo_autor)
     db.session.commit()
-    return jsonify({'mensaje': 'Autor agregado correctamente', 'id': nuevo_autor.id, 'slug': slug}), 201
+    return {'mensaje': 'Autor agregado correctamente', 'id': nuevo_autor.id_autor, 'slug': slug_autor}, 201
