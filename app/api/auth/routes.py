@@ -1,8 +1,8 @@
-from flask import Blueprint, request, jsonify, redirect , session
-from app.api.auth.auth import token_required
+from flask import Blueprint, request, jsonify, redirect , session, Response
 from app.models.usuarios import Usuarios
 from app import db
 import time
+import json
 
 from flask_login import login_user, logout_user, current_user, login_required
 
@@ -67,7 +67,7 @@ def callback():
     session.pop("oauth_nonce", None)
 
     # 6. Upsert de usuario en BD
-    user = Usuarios.query.filter_by(email=email).first()
+    user = Usuarios.query.filter_by(correo_institucional=email).first()
     if not user:
         # Crear nuevo usuario
         user = Usuarios(
@@ -76,6 +76,7 @@ def callback():
             foto_perfil=claims.get("picture"),
             rol="usuario"  # Rol por defecto
         )
+        print("Nuevo usuario creado:", user)
         db.session.add(user)
     else:
         # Actualizar datos existentes
@@ -87,5 +88,24 @@ def callback():
     login_user(user,remember=False)
     session["_fresh_login"] = user.id_usuario
 
-    return jsonify({"message": "Login successful", "data": {"correo_institucional": user.correo_institucional, "nombre_usuario": user.nombre_usuario, "foto_perfil": user.foto_perfil}}), 200
+    payload = {
+    "message": "Login successful",
+    "data": {
+        "correo_institucional": user.correo_institucional,
+        "nombre_usuario": user.nombre_usuario,
+        "foto_perfil": user.foto_perfil,
+    }
+    }
 
+    return Response(
+        json.dumps(payload, ensure_ascii=False),
+        mimetype="application/json; charset=utf-8",
+        status=200,
+    )
+
+@auth_bp.route('/logout/', methods=['GET'])
+@login_required
+def logout():
+    logout_user()
+    session.clear()
+    return jsonify({"message": "Logged out successfully"}), 200

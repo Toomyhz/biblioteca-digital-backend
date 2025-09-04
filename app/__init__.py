@@ -61,10 +61,13 @@ def create_app():
         return response
 
     from app.models.usuarios import Usuarios
+    from app.models.libros import Libro
+    from app.models.autores import Autores
+    from app.models.carreras import Carreras
 
     # User loader para Flask-Login
     @login_manager.user_loader
-    def load_user(user_id):
+    def load_user(user_id:str):
         return Usuarios.query.get(int(user_id))
 
     return app
