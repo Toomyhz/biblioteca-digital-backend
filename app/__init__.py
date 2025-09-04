@@ -27,9 +27,11 @@ def create_app():
     from app.api.libros.routes import libro_bp
     from app.api.autores.routes import autor_bp
     from app.api.auth.routes import auth_bp
+    from app.api.carreras.routes import carrera_bp
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(libro_bp, url_prefix='/api/libros')
     app.register_blueprint(autor_bp, url_prefix='/api/autores')
+    app.register_blueprint(carrera_bp, url_prefix='/api/carreras')
     
     CORS(app,origins=["http://localhost:5173"],supports_credentials=True)
 
