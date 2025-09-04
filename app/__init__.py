@@ -7,6 +7,7 @@ from flask_session import Session
 import redis
 from sqlalchemy import create_engine
 import os
+from app.extensions.login import login_manager
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -24,6 +25,7 @@ def create_app():
     server_session.init_app(app)
     db.init_app(app)
     migrate.init_app(app, db)
+    login_manager.init_app(app)
 
     # Oracle
     tns = app.config.get("TNS_ADMIN")
@@ -58,9 +60,11 @@ def create_app():
 
     from app.models.usuarios import Usuarios
     from app.models.roles import Rol
-    from app.models.carreras import Carreras
-    from app.models.autores import Autores
-    from app.models.libros import Libro
+
+    # User loader para Flask-Login
+    @login_manager.user_loader
+    def load_user(user_id):
+        return Usuarios.query.get(int(user_id))
 
     return app
 

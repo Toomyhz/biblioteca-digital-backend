@@ -1,6 +1,10 @@
 from flask import Blueprint, request, jsonify, redirect , session
 from app.api.auth.auth import token_required
+from app.models.usuarios import Usuarios
+from app import db
 import time
+
+from flask_login import login_user, logout_user, current_user, login_required
 
 from app.api.auth.services import (
     _build_google_auth_url,
@@ -63,17 +67,25 @@ def callback():
     session.pop("oauth_nonce", None)
 
     # 6. Upsert de usuario en BD
+    user = Usuarios.query.filter_by(email=email).first()
+    if not user:
+        # Crear nuevo usuario
+        user = Usuarios(
+            correo_institucional=claims.get("email"),
+            nombre_usuario=claims.get("name"),
+            foto_perfil=claims.get("picture"),
+            rol="usuario"  # Rol por defecto
+        )
+        db.session.add(user)
+    else:
+        # Actualizar datos existentes
+        user.nombre_usuario = claims.get("name")
+        user.foto_perfil = claims.get("picture")
 
-    data_form = {
-        'email': claims.get("email"),
-        'name': claims.get("name"),
-        'picture': claims.get("picture"),
-    }
+    db.session.commit()
+    # 7. LOG IN del usuario (crear sesión)
+    login_user(user,remember=False)
+    session["_fresh_login"] = user.id_usuario
 
-    session.pop("oauth_state", None)
-    session.pop("oauth_nonce", None)
-
-    # Aquí puedes guardar el usuario en la base de datos
-
-    return jsonify({"message": "Login successful", "data": data_form})
+    return jsonify({"message": "Login successful", "data": {"correo_institucional": user.correo_institucional, "nombre_usuario": user.nombre_usuario, "foto_perfil": user.foto_perfil}}), 200
 
