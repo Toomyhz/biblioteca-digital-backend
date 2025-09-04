@@ -9,7 +9,7 @@ import os
 def agregar_libro_service(data, archivo):
     if not archivo or archivo.filename == '':
             return jsonify({'error': 'Archivo PDF requerido'}), 400
-        
+ 
     filename = secure_filename(archivo.filename)
     ruta_relativa = f'libros_pdf/{filename}'
     slug = generar_slug(data.get("new_titulo"))
