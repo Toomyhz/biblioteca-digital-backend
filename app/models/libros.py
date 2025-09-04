@@ -7,7 +7,9 @@ from sqlalchemy import Sequence
 class Libro(db.Model):
     __tablename__ = 'libros'
 
-    id_libro = db.Column(db.Integer, Sequence('userd_id_seq'), primary_key=True)
+    id_libro = db.Column(db.Integer,
+                         db.Sequence("libros_seq", start= 1, increment=1),
+                         primary_key=True)
     titulo = db.Column(db.String(100), nullable=False)
     isbn = db.Column(db.String(100), nullable=False)
     anio_publicacion = db.Column(db.Integer, nullable=True)
