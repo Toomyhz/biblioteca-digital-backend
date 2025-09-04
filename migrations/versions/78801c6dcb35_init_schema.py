@@ -74,7 +74,6 @@ def downgrade():
     op.drop_table('usuarios')
     op.drop_table('libros_carreras')
     op.drop_table('libros_autores')
-    op.drop_table('roles')
     op.drop_table('libros')
     op.drop_table('carreras')
     op.drop_table('autores')
