@@ -59,7 +59,6 @@ def create_app():
         return response
 
     from app.models.usuarios import Usuarios
-    from app.models.roles import Rol
 
     # User loader para Flask-Login
     @login_manager.user_loader
