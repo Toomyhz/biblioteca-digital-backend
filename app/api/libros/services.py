@@ -1,5 +1,4 @@
 from app import db
-from app.models.libros import Libro
 from app.config import Config
 from app.api.utils.helpers import generar_slug
 from werkzeug.utils import secure_filename

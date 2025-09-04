@@ -2,6 +2,7 @@ from flask import current_app, session
 from urllib.parse import urlencode
 import os, secrets, time, requests
 
+
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
@@ -53,5 +54,5 @@ def _verify_id_token(idt: str):
 
 def _require_domain(email: str):
     domain = email.split("@")[-1].lower()
-    allowed = current_app.config.get("ALLOWED_EMAIL_DOMAIN", "").lower()
+    allowed = current_app.config.get("ALLOWED_EMAIL_DOMAINS").lower()
     return allowed and (domain == allowed)

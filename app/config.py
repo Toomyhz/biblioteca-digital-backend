@@ -37,12 +37,17 @@ class DevelopmentConfig(Config):
     f"oracle+oracledb://{USER_ORACLE}:{PW_ORACLE}@{DB_ALIAS}"
     f"?config_dir={TNS_ADMIN}&wallet_location={TNS_ADMIN}"
     + (f"&wallet_password={WALLET_PASSWORD}" if WALLET_PASSWORD else "")
-)
+    )
+    # Sesiones, revisar
     SESSION_TYPE = 'filesystem'
     SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
-
+    SESSION_KEY_PREFIX = 'sess:'  # opcional
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
+    PERMANENT_SESSION_LIFETIME = 3600  # si alguna vez usas sesiones permanentes
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
