@@ -18,7 +18,8 @@ depends_on = None
 
 def upgrade():
     op.execute("CREATE SEQUENCE autores_seq START WITH 1 INCREMENT BY 1 NOCACHE")
-
+    op.execute("CREATE SEQUENCE carreras_seq START WITH 1 INCREMENT BY 1 NOCACHE")
 
 def downgrade():
+    op.execute("DROP SEQUENCE carreras_seq")
     op.execute("DROP SEQUENCE autores_seq")

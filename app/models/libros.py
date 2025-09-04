@@ -1,7 +1,7 @@
 from app import db
 from sqlalchemy.sql import func
 from sqlalchemy.sql.sqltypes import DateTime
-from app.models.asociaciones import libros_autores
+from app.models.asociaciones import libros_autores, libros_carreras
 from sqlalchemy import Sequence
 
 class Libro(db.Model):
@@ -17,6 +17,11 @@ class Libro(db.Model):
     autores = db.relationship(
         "Autores",
         secondary=libros_autores,
+        back_populates="libros"
+    )
+    carreras = db.relationship(
+        "Carreras",
+        secondary=libros_carreras,
         back_populates="libros"
     )
  
