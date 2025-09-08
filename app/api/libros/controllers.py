@@ -13,4 +13,5 @@ def agregar_libro():
 def mostrar_libro():
     return "Mostrar libro"
 
-mostrar_libro()
+def mostrar_libro():
+    pass

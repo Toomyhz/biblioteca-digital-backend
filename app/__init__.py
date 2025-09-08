@@ -61,7 +61,7 @@ def create_app():
         return response
 
     from app.models.usuarios import Usuarios
-    from app.models.libros import Libro
+    from app.models.libros import Libros
     from app.models.autores import Autores
     from app.models.carreras import Carreras
 

@@ -14,7 +14,7 @@ class Autores(db.Model):
     slug_autor = db.Column(db.String(255), unique=True, nullable=False)
     
     libros = db.relationship(
-        "Libro",
+        "Libros",
         secondary=libros_autores,
         back_populates="autores"
     )

@@ -1,3 +1,4 @@
+from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
 from app import db
 

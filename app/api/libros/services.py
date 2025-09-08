@@ -1,39 +1,52 @@
 from app import db
 from app.config import Config
+from app.models.libros import Libros
+from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
 from werkzeug.utils import secure_filename
 from flask import jsonify
 import os
 
 def agregar_libro_service(data, archivo):
-    campos_requeridos = ["new_titulo", "new_autor", "new_anio", "new_carrera", "new_estado"]    
-    for campo in campos_requeridos:
-        if not data.get(campo):
-                return jsonify({'error': f'El campo {campo} es obligatorio'}), 400
-    if not archivo or archivo.filename == '':
-        return jsonify({'error': 'El archivo PDF es obligatorio'}), 400
-    
+    titulo = data.get("new_titulo")
+    isbn = data.get("new_isbn")
+    anio_publicacion = data.get("new_anio_publicacion")
+    estado = data.get("new_estado")
+    autores_ids = data.get("autores_ids", [])
     filename = secure_filename(archivo.filename)
-    slug = generar_slug(data.get("new_titulo"))
-    ruta_relativa = f'libros_pdf/{slug}_{filename}'
+    if not filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'El archivo debe ser un PDF'}), 400
     
-    try:
-        # Crear y guardar el libro en la base de datos
-        nuevo_libro = Libro(
-                titulo=data.get("new_titulo"),
-                autor=data.get("new_autor"),
-                anio_publicacion=data.get("new_anio"),
-                carrera=data.get("new_carrera"),
-                estado=data.get("new_estado"),
-                archivo_pdf=ruta_relativa,
-                slug=slug
-        )
-        db.session.add(nuevo_libro)
-        db.session.commit()
-
-        archivo.save(os.path.join(Config.UPLOAD_FOLDER, filename))
-
-        return jsonify({'mensaje': 'Libro subido correctamente', 'slug': slug}), 201
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': 'Error al subir el libro', 'detalle': str(e)}), 500
+    if not titulo or not estado or not archivo:
+        return jsonify({'error': 'Título, estado y archivo son obligatorios'}), 400
+    
+    slug_libro = generar_slug(titulo)
+    archivo_path = os.path.join(Config.UPLOAD_FOLDER, filename)
+    archivo.save(archivo_path)
+    
+    nuevo_libro = Libros(
+        titulo=titulo,
+        isbn=isbn,
+        anio_publicacion=anio_publicacion,
+        estado=estado,
+        archivo_pdf=archivo_path,
+        slug_titulo=slug_libro
+    )
+    
+    db.session.add(nuevo_libro)
+    db.session.flush()
+    
+    # Cambiar Slug con id
+    id_libro = str(nuevo_libro.id_libro)
+    slug_libro = generar_slug(titulo, id_libro)
+    nuevo_libro.slug_titulo = slug_libro
+    db.session.commit()
+    
+    # Agregar registro a la tabla de asociación libros_autores si se proporciona id_autor
+    if autores_ids:
+        for autor_id in autores_ids:
+            autor = Autores.query.get(autor_id)
+            if autor:
+                nuevo_libro.autores.append(autor)
+    
+    return jsonify({'mensaje': 'Libro agregado correctamente', 'id': nuevo_libro.id_libro, 'slug': slug_libro}), 201
