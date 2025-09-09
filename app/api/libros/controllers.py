@@ -10,8 +10,9 @@ def agregar_libro():
     else:
         return jsonify({'error': 'Archivo no permitido'}), 400
     
-def mostrar_libro():
+def actualizar_libro():
+    if request.method != 'PUT':
+        return jsonify({'error': 'Método no permitido'}), 400
+    
+    data = request.form
     return "Mostrar libro"
-
-def mostrar_libro():
-    pass
