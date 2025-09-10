@@ -122,9 +122,23 @@ def actualizar_libro_service(id_libro, data, archivo=None):
     
     db.session.commit()
     
-    return {
-        'mensaje': 'Libro actualizado correctamente',
-        'libro': libro.to_dict()
+    return {'mensaje': 'Libro actualizado correctamente',
+            'libro': libro.to_dict()
     }, 201
-     
+
+def eliminar_libro_service(id_libro):
+    libro = Libros.query.get(id_libro)
+    if not libro:
+        return {'error': 'Carrera no encontrada'}, 404
     
+    db.session.delete(libro)
+    db.session.commit()
+    
+    return {'mensaje': 'Libro eliminado correctamente',
+            'libro': libro.to_dict()
+    }, 200
+
+def leer_libros_service():
+    libros = Libros.query.order_by(Libros.id_libro.asc()).all()
+    libros_dict = [libro.to_dict() for libro in libros]
+    return libros_dict, 200
