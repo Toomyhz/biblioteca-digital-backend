@@ -16,3 +16,13 @@ class Carreras(db.Model):
         secondary=libros_carreras,
         back_populates="carreras"
         )
+
+    def to_dict(self, include_libros=True):
+        data = {
+            "id_carrera": self.id_carrera,
+            "nombre_carrera": self.nombre_carrera,
+            "slug_carrera": self.slug_carrera
+        }
+        if include_libros:
+            data["libros"] = [libro.to_dict(include_autores=False) for libro in self.libros]
+        return data

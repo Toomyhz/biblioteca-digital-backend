@@ -16,6 +16,7 @@ class Libros(db.Model):
     estado = db.Column(db.String(50), nullable=False)
     archivo_pdf = db.Column(db.String(200), nullable=False)
     slug_titulo = db.Column(db.String(255), unique=True, nullable=False)
+    
     autores = db.relationship(
         "Autores",
         secondary=libros_autores,
@@ -26,6 +27,19 @@ class Libros(db.Model):
         secondary=libros_carreras,
         back_populates="libros"
     )
-    def __str__(self):
-        return super().__str__() + f" - {self.titulo}"
+    def to_dict(self, include_autores=True, include_carreras=True):
+        data = {
+            "id_libro": self.id_libro,
+            "titulo": self.titulo,
+            "isbn": self.isbn,
+            "anio_publicacion": self.anio_publicacion,
+            "estado": self.estado,
+            "archivo_pdf": self.archivo_pdf,
+            "slug_titulo": self.slug_titulo,
+        }
+        if include_autores:
+            data["autores"] = [autor.to_dict(include_libros=False) for autor in self.autores]
+        if include_carreras:
+            data["carreras"] = [carrera.to_dict(include_libros=False) for carrera in self.carreras]
+        return data
  

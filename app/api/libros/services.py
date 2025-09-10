@@ -13,16 +13,18 @@ def agregar_libro_service(data, archivo):
     isbn = data.get("new_isbn")
     anio_publicacion = data.get("new_anio_publicacion")
     estado = data.get("new_estado")
-    filename = secure_filename(archivo.filename)
-    if not filename.lower().endswith('.pdf'):
-        return jsonify({'error': 'El archivo debe ser un PDF'}), 400
     
     if not titulo or not estado or not archivo:
         return jsonify({'error': 'Título, estado y archivo son obligatorios'}), 400
     
-    slug_libro = generar_slug(titulo)
+    filename = secure_filename(archivo.filename)
+    if not filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'El archivo debe ser un PDF'}), 400
+    
     archivo_path = os.path.join(Config.UPLOAD_FOLDER, filename)
     archivo.save(archivo_path)
+    
+    slug_libro = generar_slug(titulo)
     
     nuevo_libro = Libros(
         titulo=titulo,
@@ -60,11 +62,15 @@ def agregar_libro_service(data, archivo):
                 
     db.session.commit()
     
-    return {'mensaje': 'Libro agregado correctamente', 
-            'id': nuevo_libro.id_libro, 
-            'slug': nuevo_libro.slug_titulo}, 201
+    print(f"\n\n\n {nuevo_libro.autores} \n\n\n")
+    print(f"\n\n\n {nuevo_libro.carreras} \n\n\n")
+    
+    return {
+        'mensaje': 'Libro agregado correctamente', 
+        'libro': nuevo_libro.to_dict()
+    }, 201
 
-def actualizar_libros_service(id_libro, data):
+def actualizar_libro_service(id_libro, data, archivo=None):
     libro = Libros.query.get(id_libro)
     if not libro:
         return None, "Libro no encontrado", 404
@@ -73,11 +79,24 @@ def actualizar_libros_service(id_libro, data):
     isbn = data.get("edit_isbn")
     anio_publicacion = data.get("edit_anio_publicacion")
     estado = data.get("edit_estado")
-    autores_ids = data.get("autores_ids", [])
-    carreras_ids = data.get("carreras_ids", [])
+    autores_ids = data.get("edit_autores_ids", [])
+    carreras_ids = data.get("edit_carreras_ids", [])
     
     if not titulo or not estado:
         return None, "El título y estado son obligatorios", 400
+    
+    slug_libro = generar_slug(titulo, id_libro)
+    
+    if archivo:
+        filename = secure_filename(archivo.filename)
+        if not filename.lower().endswith(".pdf"):
+            return None, "El archivo debe ser un pdf", 400
+        if libro.archivo_pdf and os.path.exists(libro.archivo_pdf):
+            os.remove(libro.archivo_pdf)
+            
+        archivo_path = os.path.join(Config.UPLOAD_FOLDER, filename)
+        archivo.save(archivo_path)
+        libro.archivo_pdf = archivo_path    
     
     libro.titulo = titulo
     libro.isbn = isbn
@@ -85,23 +104,17 @@ def actualizar_libros_service(id_libro, data):
     libro.estado = estado
     libro.slug_titulo = slug_libro
     libro.autores = [] 
-    libro.carreras = []
+    libro.carreras = []    
     
-    slug_libro = generar_slug(titulo, id_libro)
+    db.session.flush()
     
-    autores_ids = data.getlist("autor_id")
     autores_ids = [int(a) for a in autores_ids]
-    
     if autores_ids:
         libro.autores = Autores.query.filter(
             Autores.id_autor.in_(autores_ids)
         ).all()
 
-    carreras_ids = data.get("carrera_id", [])
-    if isinstance(carreras_ids, str):
-        carreras_ids = [int(carreras_ids)]
-    elif isinstance(carreras_ids, int):
-        carreras_ids = [carreras_ids]
+    carreras_ids = [int(c) for c in carreras_ids]
     if carreras_ids:
         libro.carreras = Carreras.query.filter(
             Carreras.id_carrera.in_(carreras_ids)
@@ -109,9 +122,9 @@ def actualizar_libros_service(id_libro, data):
     
     db.session.commit()
     
-    return libro, {'mensaje': 'Libro actualizado correctamente',
-                   'titulo': libro.titulo,
-                   'slug': libro.slug_titulo
-                   }, 200
-    
+    return {
+        'mensaje': 'Libro actualizado correctamente',
+        'libro': libro.to_dict()
+    }, 201
+     
     
