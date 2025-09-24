@@ -30,6 +30,7 @@ def _build_google_auth_url():
         "hd": current_app.config.get("ALLOWED_EMAIL_DOMAIN", ""),
         "prompt": "consent",  # opcional; para forzar selección/cambio de cuenta
     }
+    print(urlencode(params))
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 def _exchange_code_for_tokens(code: str):

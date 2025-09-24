@@ -24,7 +24,7 @@ def upgrade():
 
 
 def downgrade():
-    op.execute("DROP SEQUENCE IF EXISTS usuario_id_seq")
-    op.execute("DROP SEQUENCE IF EXISTS autores_seq")
-    op.execute("DROP SEQUENCE IF EXISTS libros_seq")
-    op.execute("DROP SEQUENCE IF EXISTS carreras_seq")
+    op.execute("DROP SEQUENCE usuario_id_seq")
+    op.execute("DROP SEQUENCE autores_seq")
+    op.execute("DROP SEQUENCE libros_seq")
+    op.execute("DROP SEQUENCE carreras_seq")
