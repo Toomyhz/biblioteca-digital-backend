@@ -36,7 +36,7 @@ def upgrade():
     op.create_table('libros',
     sa.Column('id_libro', sa.Integer(), nullable=False),
     sa.Column('titulo', sa.String(length=100), nullable=False),
-    sa.Column('isbn', sa.String(length=100), nullable=False),
+    sa.Column('isbn', sa.String(length=100), nullable=True),
     sa.Column('anio_publicacion', sa.Integer(), nullable=True),
     sa.Column('estado', sa.String(length=50), nullable=False),
     sa.Column('archivo_pdf', sa.String(length=200), nullable=False),

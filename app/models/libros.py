@@ -4,7 +4,7 @@ from sqlalchemy.sql.sqltypes import DateTime
 from app.models.asociaciones import libros_autores, libros_carreras
 from sqlalchemy import Sequence
 
-class Libro(db.Model):
+class Libros(db.Model):
     __tablename__ = 'libros'
 
     id_libro = db.Column(db.Integer,

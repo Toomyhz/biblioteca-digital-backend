@@ -12,7 +12,7 @@ class Carreras(db.Model):
     slug_carrera = db.Column(db.String(100), unique=True, nullable=False)
     
     libros = db.relationship(
-        "Libro",
+        "Libros",
         secondary=libros_carreras,
         back_populates="carreras"
         )

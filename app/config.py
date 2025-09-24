@@ -1,5 +1,6 @@
 from dotenv import load_dotenv
 import os, secrets
+import redis
 
 # Cargar las variables de entorno desde el archivo .env
 load_dotenv()
@@ -39,15 +40,18 @@ class DevelopmentConfig(Config):
     + (f"&wallet_password={WALLET_PASSWORD}" if WALLET_PASSWORD else "")
     )
     # Sesiones, revisar
-    SESSION_TYPE = 'filesystem'
-    SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
-    SESSION_PERMANENT = False
+    SESSION_TYPE = 'redis'
+    SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
+    # SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
+    SESSION_PERMANENT = True
     SESSION_USE_SIGNER = True
     SESSION_KEY_PREFIX = 'sess:'  # opcional
+
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
-    PERMANENT_SESSION_LIFETIME = 3600  # si alguna vez usas sesiones permanentes
+    PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+    
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
