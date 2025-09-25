@@ -11,7 +11,7 @@ class Config:
     
     REDIRECT_URI = os.getenv("redirect_uri")
     TOKEN_URL = os.getenv("TOKEN_URL")
-    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
+    PDF_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
 
 
 class ProductionConfig(Config):
@@ -74,6 +74,8 @@ class DevelopmentConfig(Config):
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
     PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+
+    
     
 class TestingConfig(Config):
     TESTING = True
