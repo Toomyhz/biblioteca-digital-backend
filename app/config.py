@@ -13,6 +13,23 @@ class Config:
     TOKEN_URL = os.getenv("TOKEN_URL")
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
 
+
+class ProductionConfig(Config):
+    DEBUG = False
+    # Aquí puedes agregar configuraciones específicas para producción
+    # Por ejemplo, configuración de base de datos diferente, etc.
+    SESSION_TYPE = 'filesystem'
+    SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
+    SESSION_PERMANENT = True
+    SESSION_USE_SIGNER = True
+    SESSION_KEY_PREFIX = 'sess:'  # opcional
+
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = True  # Asegúrate de usar HTTPS en producción
+    PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+
+
 class DevelopmentConfig(Config):
     DEBUG = True
 
@@ -39,6 +56,12 @@ class DevelopmentConfig(Config):
     f"?config_dir={TNS_ADMIN}&wallet_location={TNS_ADMIN}"
     + (f"&wallet_password={WALLET_PASSWORD}" if WALLET_PASSWORD else "")
     )
+    SQLALCHEMY_ENGINE_OPTIONS = {
+    "pool_pre_ping": True,       # Verifica la conexión antes de usarla
+    "pool_recycle": 1800,        # Recicla conexiones cada 30 min (ajústalo al timeout de Oracle)
+    "pool_size": 5,              # Número de conexiones activas
+    "max_overflow": 10,          # Conexiones extra si hay carga alta
+}
     # Sesiones, revisar
     SESSION_TYPE = 'redis'
     SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
