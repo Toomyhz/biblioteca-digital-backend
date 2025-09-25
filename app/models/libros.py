@@ -4,11 +4,12 @@ from sqlalchemy.sql.sqltypes import DateTime
 from app.models.asociaciones import libros_autores, libros_carreras
 from sqlalchemy import Sequence
 
+
 class Libros(db.Model):
     __tablename__ = 'libros'
 
     id_libro = db.Column(db.Integer,
-                         db.Sequence("libros_seq", start= 1, increment=1),
+                         db.Sequence("libros_seq", start=1, increment=1),
                          primary_key=True)
     titulo = db.Column(db.String(100), nullable=False)
     isbn = db.Column(db.String(100), nullable=False)
@@ -26,4 +27,3 @@ class Libros(db.Model):
         secondary=libros_carreras,
         back_populates="libros"
     )
- 
