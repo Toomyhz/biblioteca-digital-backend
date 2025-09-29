@@ -9,6 +9,16 @@ from flask import request, jsonify
 import os
 
 
+def listar_libros_service():
+    try:
+        libros = Libros.query.order_by(Libros.id_libro.asc()).all()
+        libros_dict = [libro.to_dict() for libro in libros]
+        return libros_dict, 200
+    except Exception as e:
+        db.session.rollback()
+        return {'error': f'Error al listar libros: {e}'}, 500
+
+
 def agregar_libro_service(data):
     try:
         titulo = data.get("new_titulo")
@@ -24,7 +34,7 @@ def agregar_libro_service(data):
         if not filename.lower().endswith('.pdf'):
             return jsonify({'error': 'El archivo debe ser un PDF'}), 400
 
-        archivo_path = os.path.join(Config.UPLOAD_FOLDER, filename)
+        archivo_path = os.path.join(filename)
         archivo.save(archivo_path)
 
         slug_libro = generar_slug(titulo)
@@ -34,7 +44,7 @@ def agregar_libro_service(data):
             isbn=isbn,
             anio_publicacion=anio_publicacion,
             estado=estado,
-            archivo_pdf=archivo_path,
+            archivo_pdf=filename,
             slug_titulo=slug_libro
         )
 
@@ -74,16 +84,6 @@ def agregar_libro_service(data):
     except Exception as e:
         db.session.rollback()
         return {'error': f'Error al crear libro: {e}'}, 500
-
-
-def listar_libros_service():
-    try:
-        libros = Libros.query.order_by(Libros.id_libro.asc()).all()
-        libros_dict = [libro.to_dict() for libro in libros]
-        return libros_dict, 200
-    except Exception as e:
-        db.session.rollback()
-        return {'error': f'Error al listar libros: {e}'}, 500
 
 
 def actualizar_libro_service(id_libro, data):

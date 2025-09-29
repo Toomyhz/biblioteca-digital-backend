@@ -1,8 +1,5 @@
 from app import db
-from sqlalchemy.sql import func
-from sqlalchemy.sql.sqltypes import DateTime
 from app.models.asociaciones import libros_autores, libros_carreras
-from sqlalchemy import Sequence
 
 
 class Libros(db.Model):
@@ -27,3 +24,31 @@ class Libros(db.Model):
         secondary=libros_carreras,
         back_populates="libros"
     )
+
+    def to_dict_basic(self):
+        return {
+            "id_libro": self.id_libro,
+            "titulo": self.titulo,
+            "isbn": self.isbn,
+            "anio_publicacion": self.anio_publicacion,
+            "estado": self.estado,
+            "archivo_pdf": self.archivo_pdf,
+            "slug_titulo": self.slug_titulo,
+        }
+
+    def to_dict(self, include_autores=True, include_carreras=True):
+        data = {
+            "id_libro": self.id_libro,
+            "titulo": self.titulo,
+            "isbn": self.isbn,
+            "anio_publicacion": self.anio_publicacion,
+            "estado": self.estado,
+            "archivo_pdf": self.archivo_pdf,
+            "slug_titulo": self.slug_titulo,
+        }
+        if include_autores:
+            data["autores"] = [autor.to_dict_basic() for autor in self.autores]
+        if include_carreras:
+            data["carreras"] = [carrera.to_dict_basic()
+                                for carrera in self.carreras]
+        return data
