@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint
 
 libro_bp = Blueprint("libros", __name__)
 

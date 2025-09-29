@@ -3,7 +3,7 @@ from app.api.libros.services import agregar_libro_service, actualizar_libro_serv
 
 
 def agregar_libro():
-    data = request.form
+    data = request.get_json()
     response, status = agregar_libro_service(data)
     return jsonify(response), status
 
@@ -17,7 +17,7 @@ def actualizar_libro(id_libro):
     if not id_libro:
         return jsonify({'error': 'El ID del libro es obligatorio'}), 40
 
-    data = request.form
+    data = request.get_json()
     response, status = actualizar_libro_service(id_libro, data)
 
     return jsonify(response), status

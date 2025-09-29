@@ -11,6 +11,10 @@ import os
 
 def listar_libros_service():
     try:
+        limite = request.args.get('limite')
+        filtros = request.args.get('filtros')
+        print(limite, filtros)
+
         libros = Libros.query.order_by(Libros.id_libro.asc()).all()
         libros_dict = [libro.to_dict() for libro in libros]
         return libros_dict, 200

@@ -3,7 +3,7 @@ from app.api.autores.services import agregar_autor_service, actualizar_autor_ser
 
 
 def agregar_autor():
-    data = request.form
+    data = request.get_json()
     response, status = agregar_autor_service(data)
     return jsonify(response), status
 
