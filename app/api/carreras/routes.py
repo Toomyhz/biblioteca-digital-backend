@@ -17,11 +17,13 @@ def listar_carreras_route():
 
 @carrera_bp.route("/<int:id_carrera>", methods=['PUT'])
 def actualizar_carrera_route(id_carrera):
+    id_carrera = str(id_carrera)
     from .controllers import actualizar_carrera
     return actualizar_carrera(id_carrera)
 
 
 @carrera_bp.route("/<int:id_carrera>", methods=['DELETE'])
 def eliminar_carrera_route(id_carrera):
+    id_carrera = str(id_carrera)
     from .controllers import eliminar_carrera
     return eliminar_carrera(id_carrera)

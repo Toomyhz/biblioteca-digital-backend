@@ -21,6 +21,7 @@ def listar_autores_route():
 @autor_bp.route("/<int:id_autor>", methods=["PUT"])
 # @roles_required('usuario')
 def actualizar_autor_route(id_autor):
+    id_autor = str(id_autor)
     from app.api.autores.controllers import actualizar_autor
     return actualizar_autor(id_autor)
 
