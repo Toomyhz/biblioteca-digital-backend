@@ -29,5 +29,6 @@ def actualizar_autor_route(id_autor):
 @autor_bp.route("/<int:id_autor>", methods=["DELETE"])
 # @roles_required('usuario')
 def eliminar_autor_route(id_autor):
+    id_autor = str(id_autor)
     from app.api.autores.controllers import eliminar_autor
     return eliminar_autor(id_autor)
