@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint
 
 libro_bp = Blueprint("libros", __name__)
 
@@ -17,11 +17,13 @@ def listar_libro_route():
 
 @libro_bp.route("/<int:id_libro>", methods=['PUT'])
 def actualizar_libro_route(id_libro):
+    id_libro = str(id_libro)
     from .controllers import actualizar_libro
     return actualizar_libro(id_libro)
 
 
 @libro_bp.route("/<int:id_libro>", methods=['DELETE'])
 def eliminar_libro_route(id_libro):
+    id_libro = str(id_libro)
     from .controllers import eliminar_libro
     return eliminar_libro(id_libro)

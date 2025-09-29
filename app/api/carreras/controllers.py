@@ -3,7 +3,7 @@ from app.api.carreras.services import agregar_carrera_service, actualizar_carrer
 
 
 def agregar_carrera():
-    data = request.form
+    data = request.get_json()
     response, status = agregar_carrera_service(data)
     return jsonify(response), status
 

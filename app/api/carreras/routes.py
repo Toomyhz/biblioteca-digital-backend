@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint
 
 carrera_bp = Blueprint('carreras', __name__)
 
@@ -9,7 +9,7 @@ def agregar_carrera_route():
     return agregar_carrera()
 
 
-@carrera_bp.route("/listar/", methods=['GET'])
+@carrera_bp.route("/", methods=['GET'])
 def listar_carreras_route():
     from .controllers import listar_carreras
     return listar_carreras()
@@ -17,11 +17,13 @@ def listar_carreras_route():
 
 @carrera_bp.route("/<int:id_carrera>", methods=['PUT'])
 def actualizar_carrera_route(id_carrera):
+    id_carrera = str(id_carrera)
     from .controllers import actualizar_carrera
     return actualizar_carrera(id_carrera)
 
 
 @carrera_bp.route("/<int:id_carrera>", methods=['DELETE'])
 def eliminar_carrera_route(id_carrera):
+    id_carrera = str(id_carrera)
     from .controllers import eliminar_carrera
     return eliminar_carrera(id_carrera)
