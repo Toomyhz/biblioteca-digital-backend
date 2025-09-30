@@ -11,13 +11,20 @@ import os
 
 def listar_libros_service():
     try:
-        limite = request.args.get('limite')
-        filtros = request.args.get('filtros')
-        print(limite, filtros)
+        pagina = request.args.get("pagina", 1, type=int)
+        limite = request.args.get("limite", 15, type=int)
+        paginacion = Libros.query.order_by(Libros.id_libro.asc()).paginate(
+            page=pagina, per_page=limite, error_out=False)
 
-        libros = Libros.query.order_by(Libros.id_libro.asc()).all()
-        libros_dict = [libro.to_dict() for libro in libros]
-        return libros_dict, 200
+        libros = [libro.to_dict() for libro in paginacion.items]
+
+        return {
+            "libros": libros,
+            "pagina": paginacion.page,
+            "limite": paginacion.per_page,
+            "total": paginacion.total,
+            "total_paginas": paginacion.pages
+        }, 200
     except Exception as e:
         db.session.rollback()
         return {'error': f'Error al listar libros: {e}'}, 500
