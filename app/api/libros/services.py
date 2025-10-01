@@ -154,8 +154,8 @@ def actualizar_libro_service(id_libro, data, archivo):
             pdf_file = archivo['pdf']
             if pdf_file and pdf_file.filename and archivos_permitidos(pdf_file.filename):
                 # Eliminar PDF anterior si existe
-                if libro.pdf_path:
-                    old_path = os.path.join(UPLOAD_FOLDER, libro.pdf_path)
+                if libro.archivo_pdf:
+                    old_path = os.path.join(UPLOAD_FOLDER, libro.archivo_pdf)
                     if os.path.exists(old_path):
                         os.remove(old_path)
                 
