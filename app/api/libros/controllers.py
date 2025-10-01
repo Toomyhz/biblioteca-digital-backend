@@ -3,29 +3,21 @@ from app.api.libros.services import agregar_libro_service, actualizar_libro_serv
 
 
 def agregar_libro():
-    data = request.get_json()
-    response, status = agregar_libro_service(data)
+    data = request.form
+    archivo = request.files
+    response, status = agregar_libro_service(data, archivo)
     return jsonify(response), status
-
 
 def listar_libros():
     response, status = listar_libros_service()
     return jsonify(response), status
 
-
 def actualizar_libro(id_libro):
-    if not id_libro:
-        return jsonify({'error': 'El ID del libro es obligatorio'}), 40
-
-    data = request.get_json()
-    response, status = actualizar_libro_service(id_libro, data)
-
+    data = request.form
+    archivo = request.files
+    response, status = actualizar_libro_service(id_libro, data, archivo)
     return jsonify(response), status
 
-
 def eliminar_libro(id_libro):
-    if not id_libro:
-        return jsonify({'error': 'El ID del libro es obligatorio'}), 400
     response, status = eliminar_libro_service(id_libro)
-
     return jsonify(response), status

@@ -1,7 +1,6 @@
 import re
 import unicodedata
 
-
 def generar_slug(texto, id=None):
     if not texto:
         return None
@@ -14,4 +13,4 @@ def generar_slug(texto, id=None):
     texto = texto.lower()
     # Reemplazar espacios y caracteres especiales por guiones
     texto = re.sub(r'[^a-z0-9]+', '-', texto).strip('-')
-    return texto+"-"+id
+    return texto if id +"-"+ id else f"{texto}-{id}"

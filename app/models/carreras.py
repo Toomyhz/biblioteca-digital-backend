@@ -33,5 +33,5 @@ class Carreras(db.Model):
         }
         if include_libros:
             data["libros"] = [libro.to_dict(
-                include_autores=False) for libro in self.libros]
+                include_carreras=False) for libro in self.libros]
         return data
