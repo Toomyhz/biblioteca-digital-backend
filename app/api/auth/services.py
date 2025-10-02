@@ -1,6 +1,8 @@
-from flask import current_app, session
+from flask import current_app
 from urllib.parse import urlencode
-import os, secrets, time, requests
+import os, secrets, time, requests, redis
+
+myredis = redis.from_url(os.getenv("REDIS_URL"))
 
 
 from google.oauth2 import id_token
@@ -12,10 +14,9 @@ GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 def _build_google_auth_url():
     state = secrets.token_urlsafe(24)
     nonce = secrets.token_urlsafe(24)
+    ts = int(time.time())
 
-    session["oauth_state"] = state
-    session["oauth_nonce"] = nonce
-    session["oauth_state_ts"] = int(time.time())
+    myredis.setex(f"oauth:{state}",300,f"{nonce}:{ts}")
 
     params = {
         "client_id": current_app.config["GOOGLE_CLIENT_ID"],
@@ -30,7 +31,6 @@ def _build_google_auth_url():
         "hd": current_app.config.get("ALLOWED_EMAIL_DOMAIN", ""),
         "prompt": "consent",  # opcional; para forzar selección/cambio de cuenta
     }
-    print(urlencode(params))
     return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
 def _exchange_code_for_tokens(code: str):

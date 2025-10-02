@@ -1,4 +1,4 @@
-from app import db
+from app.extensions import db, login_manager
 from flask_login import UserMixin
 
 from sqlalchemy import Integer, String, Sequence
@@ -14,3 +14,6 @@ class Usuarios(db.Model, UserMixin):
     def get_id(self):
         return str(self.id_usuario)
 
+    @login_manager.user_loader
+    def load_user(user_id:str):
+        return Usuarios.query.get(int(user_id))

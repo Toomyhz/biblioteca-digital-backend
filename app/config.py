@@ -67,7 +67,7 @@ class DevelopmentConfig(Config):
     SESSION_TYPE = 'redis'
     SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
     # SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
-    SESSION_PERMANENT = True
+    SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
     SESSION_KEY_PREFIX = 'sess:'  # opcional
 
@@ -75,11 +75,13 @@ class DevelopmentConfig(Config):
     SESSION_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
     PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+    SESSION_REFRESH_EACH_REQUEST = False
 
     
     
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///test.db'
-    SQLALCHEMY_ECHO = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_ECHO = False
+    WTF_CSRF_ENABLED = False
 

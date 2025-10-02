@@ -1,35 +1,23 @@
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-
+from flask import Flask, session
 from flask_cors import CORS
-from flask_session import Session
-from sqlalchemy import create_engine
 import os
-from app.extensions.login import login_manager
+from app.extensions import db, migrate, login_manager, server_session
 
-db = SQLAlchemy()
-migrate = Migrate()
-server_session = Session()
 
-config_name = os.getenv("FLASK_ENV", "development")
-
-if config_name == "production":
-    from app.config import ProductionConfig
-    ConfigClass = ProductionConfig
-elif config_name == "testing":
-    from app.config import TestingConfig
-    ConfigClass = TestingConfig
-else:
-    from app.config import DevelopmentConfig
-    ConfigClass = DevelopmentConfig
-
-def create_app():
+def create_app(config_class=None, testing:bool = False):
     app = Flask(__name__)
-    app.config.from_object(ConfigClass)
 
-    # Inicializa extensión de sesiones
-    server_session.init_app(app)
+    # Configuración
+    if testing:
+        from app.config import TestingConfig
+        app.config.from_object(TestingConfig)
+    else:
+        if not config_class:
+            config_class = os.getenv("FLASK_CONFIG","app.config.DevelopmentConfig")
+        app.config.from_object(config_class)
+
+    # Inicializa extensiones
+    server_session(app)
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -39,15 +27,16 @@ def create_app():
     if tns:
         os.environ["TNS_ADMIN"] = tns
 
-    # Verificación de DB al iniciar
-    from sqlalchemy import text
-    with app.app_context():
-        try:
-            db.session.execute(text("SELECT 1 FROM dual"))
-            app.logger.info("Conexión a Oracle verificada")
-        except Exception as e:
-            app.logger.error(f"Error al conectar a Oracle: {e}")
-            raise
+    # Verificación de DB al iniciar (NO EN TESTING)
+    if not app.config.get("TESTING", False):
+        with app.app_context():
+            from sqlalchemy import text        
+            try:
+                db.session.execute(text("SELECT 1 FROM dual"))
+                app.logger.info("Conexión a Oracle verificada")
+            except Exception as e:
+                app.logger.error(f"Error al conectar a Oracle: {e}")
+                raise
 
     # Importación Blueprints
     from app.api.libros.routes import libro_bp
@@ -65,21 +54,10 @@ def create_app():
     # CORS
     CORS(
     app,
-    origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
+    origins=[app.config.get("FRONTEND_URL", "http://localhost:5173")],
     supports_credentials=True
-)
-
-    from app.models.usuarios import Usuarios
-    from app.models.libros import Libros
-    from app.models.autores import Autores
-    from app.models.carreras import Carreras
-
-    # User loader para Flask-Login
-    @login_manager.user_loader
-    def load_user(user_id:str):
-        return Usuarios.query.get(int(user_id))
+    )
     
-
     return app
 
 
