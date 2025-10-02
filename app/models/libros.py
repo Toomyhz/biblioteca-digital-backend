@@ -8,12 +8,13 @@ class Libros(db.Model):
     id_libro = db.Column(db.Integer,
                          db.Sequence("libros_seq", start=1, increment=1),
                          primary_key=True)
-    titulo = db.Column(db.String(100), nullable=False)
-    isbn = db.Column(db.String(100), nullable=False)
+    titulo = db.Column(db.String(255), nullable=False)
+    isbn = db.Column(db.String(50), nullable=False)
     anio_publicacion = db.Column(db.Integer, nullable=True)
-    estado = db.Column(db.String(50), nullable=False)
-    archivo_pdf = db.Column(db.String(200), nullable=False)
-    slug_titulo = db.Column(db.String(255), unique=True, nullable=False)
+    estado = db.Column(db.String(50), default='disponible')
+    archivo_pdf = db.Column(db.String(255), nullable=False)
+    slug_titulo = db.Column(db.String(300), unique=True, nullable=False)
+
     autores = db.relationship(
         "Autores",
         secondary=libros_autores,
