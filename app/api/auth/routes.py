@@ -39,7 +39,6 @@ def logout():
     session.clear()
     return jsonify({"message": "Logged out successfully"}), 200
 
-@auth_bp.route('/me', methods=['GET'])
 @auth_bp.route('/me/', methods=['GET'])
 def get_current_user():
     if not current_user.is_authenticated:

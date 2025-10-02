@@ -8,7 +8,7 @@ from flask import request
 from sqlalchemy import or_, text, func, literal
 import os
 
-UPLOAD_FOLDER = Config.UPLOAD_FOLDER
+UPLOAD_FOLDER = Config.PDF_UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'pdf'}
 
 # Funcion para evitar subir archivos que no sean pdf

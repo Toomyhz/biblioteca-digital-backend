@@ -57,7 +57,7 @@ def create_app(config_class=None, testing:bool = False):
     origins=[app.config.get("FRONTEND_URL", "http://localhost:5173")],
     supports_credentials=True
     )
-    
+    from app.models.usuarios import Usuarios
     return app
 
 
