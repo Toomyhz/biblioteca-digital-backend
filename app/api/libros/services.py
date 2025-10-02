@@ -4,9 +4,8 @@ from app.models.carreras import Carreras
 from app.models.libros import Libros
 from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
-from werkzeug.utils import secure_filename
-from flask import request, jsonify
-from sqlalchemy import or_
+from flask import request
+from sqlalchemy import or_, text, func, literal
 import os
 
 UPLOAD_FOLDER = Config.UPLOAD_FOLDER
@@ -22,22 +21,44 @@ def listar_libros_service():
         limite = request.args.get("limite", 10, type=int)
         busqueda = request.args.get("busqueda", "", type=str)
 
+        # Para Oracle
+        db.session.execute(text("ALTER SESSION SET NLS_COMP = LINGUISTIC"))
+        db.session.execute(text("ALTER SESSION SET NLS_SORT = BINARY_AI"))
+
         query = Libros.query
 
         if busqueda:
+            # Normalizar búsqueda (sin espacios, minúsculas)
+            busqueda_normalizada = busqueda.replace(" ", "").lower()
+            busqueda_pattern = f"%{busqueda_normalizada}%"
+
+            # Filtros de búsqueda
             query = query.filter(
                 or_(
-                    Libros.titulo.ilike(f"%{busqueda}%"),
-                    Libros.isbn.ilike(f"%{busqueda}%"),
-                    Libros.anio_publicacion.ilike(f"%{busqueda}%"),
-                    # # Hacer join para tener el nombre del autor
-                    # Libros.autores.any(Autores.nombre.ilike(f"%{busqueda}%")),
-                    # # Lo mismo para carreras
-                    # Libros.carreras.any(Carreras.nombre.ilike(f"%{busqueda}%")),
+                    # Buscar en título
+                    func.lower(func.replace(Libros.titulo, literal(' '), literal(''))).like(busqueda_pattern),
+                    
+                    # Buscar en ISBN
+                    func.lower(func.replace(Libros.isbn, literal(' '), literal(''))).like(busqueda_pattern),
+                    
+                    # Buscar en año (convertir a string)
+                    func.to_char(Libros.anio_publicacion).like(f"%{busqueda}%"),
+                    
+                    # Buscar en autores relacionados
+                    Libros.autores.any(
+                        func.lower(func.replace(Autores.nombre_completo, literal(' '), literal(''))).like(busqueda_pattern)
+                    ),
+                    
+                    # Buscar en carreras relacionadas
+                    Libros.carreras.any(
+                        func.lower(func.replace(Carreras.nombre_carrera, literal(' '), literal(''))).like(busqueda_pattern)
+                    )
                 )
             )
         
-        paginacion = query.order_by(Libros.id_libro.desc()).paginate(page=pagina, per_page=limite, error_out=False)
+        paginacion = query.order_by(Libros.id_libro.desc()).paginate(
+            page=pagina, per_page=limite, error_out=False
+        )
 
         libros = [libro.to_dict() for libro in paginacion.items]
 
@@ -50,9 +71,13 @@ def listar_libros_service():
                 "total_paginas": paginacion.pages
             }
         }, 200
+        
     except Exception as e:
         db.session.rollback()
-        return {'error': f'Error al listar libros: {e}'}, 500
+        print(f"ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {'error': f'Error al listar libros: {str(e)}'}, 500
 
 
 def agregar_libro_service(data, archivo):
