@@ -1,7 +1,7 @@
 from flask import Flask, session
 from flask_cors import CORS
 import os
-from app.extensions import db, migrate, login_manager, server_session
+from app.extensions import db, migrate, login_manager, server_session, api_new
 
 
 def create_app(config_class=None, testing:bool = False):
@@ -22,6 +22,8 @@ def create_app(config_class=None, testing:bool = False):
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
+    api_new.init_app(app)
+
     # Oracle
     tns = app.config.get("TNS_ADMIN")
     if tns:
@@ -38,20 +40,29 @@ def create_app(config_class=None, testing:bool = False):
                 app.logger.error(f"Error al conectar a Oracle: {e}")
                 raise
 
-    # Importación Blueprints
-    from app.api.libros.routes import libro_bp
-    from app.api.autores.routes import autor_bp
-    from app.api.auth.routes import auth_bp
-    from app.api.carreras.routes import carrera_bp
-    from app.api.lector.routes import lector_bp
-    from app.api.biblioteca.routes import biblioteca_bp
+    # Importación Blueprints (Obsoleto)
+    # from app.api.libros.routes import libro_bp
+    # from app.api.autores.routes import autor_bp
+    # from app.api.auth.routes import auth_bp
+    # from app.api.carreras.routes import carrera_bp
+    # from app.api.lector.routes import lector_bp
+    # from app.api.biblioteca.routes import biblioteca_bp
 
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    app.register_blueprint(libro_bp, url_prefix='/api/libros')
-    app.register_blueprint(autor_bp, url_prefix='/api/autores')
-    app.register_blueprint(carrera_bp, url_prefix='/api/carreras')
-    app.register_blueprint(lector_bp, url_prefix='/api/lector')
-    app.register_blueprint(biblioteca_bp, url_prefix='/api/biblioteca')
+    # app.register_blueprint(auth_bp, url_prefix='/api/auth')
+    # app.register_blueprint(libro_bp, url_prefix='/api/libros')
+    # app.register_blueprint(autor_bp, url_prefix='/api/autores')
+    # app.register_blueprint(carrera_bp, url_prefix='/api/carreras')
+    # app.register_blueprint(lector_bp, url_prefix='/api/lector')
+    # app.register_blueprint(biblioteca_bp, url_prefix='/api/biblioteca')
+
+    # Importación y registro de Namespaces
+    from app.api.libros.routes import libros_sn
+    from app.api.autores.routes import autores_sn
+    from app.api.carreras.routes import carreras_sn
+
+    api_new.add_namespace(libros_sn, path='/api/libros')
+    api_new.add_namespace(autores_sn, path='/api/autores')
+    api_new.add_namespace(carreras_sn, path='/api/carreras')
     
     # CORS
     CORS(
