@@ -44,12 +44,14 @@ def create_app(config_class=None, testing:bool = False):
     from app.api.auth.routes import auth_bp
     from app.api.carreras.routes import carrera_bp
     from app.api.lector.routes import lector_bp
+    from app.api.biblioteca.routes import biblioteca_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(libro_bp, url_prefix='/api/libros')
     app.register_blueprint(autor_bp, url_prefix='/api/autores')
     app.register_blueprint(carrera_bp, url_prefix='/api/carreras')
     app.register_blueprint(lector_bp, url_prefix='/api/lector')
+    app.register_blueprint(biblioteca_bp, url_prefix='/api/biblioteca')
     
     # CORS
     CORS(

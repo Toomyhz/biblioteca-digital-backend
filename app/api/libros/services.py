@@ -4,8 +4,8 @@ from app.models.carreras import Carreras
 from app.models.libros import Libros
 from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
-from flask import request
-from sqlalchemy import or_, text, func, literal
+from flask import request, jsonify
+from sqlalchemy import or_, text, func, literal, desc
 import os
 
 UPLOAD_FOLDER = Config.PDF_UPLOAD_FOLDER
@@ -261,3 +261,52 @@ def eliminar_libro_service(id_libro):
     except Exception as e:
         db.session.rollback()
         return {'error': f'Error al eliminar libro: {e}'}, 500
+    
+
+
+def listar_libros_home_service():
+    try:
+        # Para Oracle
+        db.session.execute(text("ALTER SESSION SET NLS_COMP = LINGUISTIC"))
+        db.session.execute(text("ALTER SESSION SET NLS_SORT = BINARY_AI"))
+
+        top_carreras = (
+            db.session.query(
+                Carreras,
+                func.count(Libros.id_libro).label("total_libros"))
+            .join(Carreras.libros)
+            .group_by(
+                Carreras.id_carrera,
+                Carreras.nombre_carrera,
+                Carreras.slug_carrera
+            )
+            .order_by(desc("total_libros"))
+            .limit(3)
+            .all()
+        )
+        print(top_carreras)
+        
+
+        data = []
+
+        for carrera, total_libros in top_carreras:
+            libros = (
+                Libros.query
+                .join(Libros.carreras)
+                .filter(Carreras.id_carrera == carrera.id_carrera)
+                .order_by(Libros.id_libro.desc())
+                .limit(5)
+                .all()
+            )
+
+            data.append({
+                "id_carrera": carrera.id_carrera,
+                "nombre_carrera": carrera.nombre_carrera,
+                "total_libros":total_libros,
+                "libros":[libro.to_dict_basic() for libro in libros]
+            })
+
+        return data, 200
+    except Exception as e:
+        db.session.rollback()
+        return {'error': f'Error al mostrar carreras: {e}'}, 500

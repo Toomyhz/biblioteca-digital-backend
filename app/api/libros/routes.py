@@ -27,3 +27,9 @@ def eliminar_libro_route(id_libro):
     id_libro = str(id_libro)
     from .controllers import eliminar_libro
     return eliminar_libro(id_libro)
+
+# Endpoints para Home
+@libro_bp.route("/home/",methods=["GET"])
+def listar_libros_home():
+    from .controllers import libros_home
+    return libros_home()

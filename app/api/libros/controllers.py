@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from app.api.libros.services import agregar_libro_service, actualizar_libro_service, eliminar_libro_service, listar_libros_service
+from app.api.libros.services import agregar_libro_service, actualizar_libro_service, eliminar_libro_service, listar_libros_service, listar_libros_home_service
 
 
 def agregar_libro():
@@ -20,4 +20,8 @@ def actualizar_libro(id_libro):
 
 def eliminar_libro(id_libro):
     response, status = eliminar_libro_service(id_libro)
+    return jsonify(response), status
+
+def libros_home():
+    response, status = listar_libros_home_service()
     return jsonify(response), status
