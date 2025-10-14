@@ -1,6 +1,10 @@
 # tests/conftest.py
 import pytest
 from app import create_app, db
+from app.models.autores import Autores
+from app.models.carreras import Carreras
+from app.models.libros import Libros
+
 
 @pytest.fixture(scope="module")
 def test_app():
@@ -8,6 +12,7 @@ def test_app():
     app = create_app("app.config.TestingConfig", testing=True)
     with app.app_context():
         yield app  # aquí ya estamos dentro del contexto
+
 
 @pytest.fixture(scope="function")
 def test_db(test_app):
@@ -17,15 +22,43 @@ def test_db(test_app):
     db.session.remove()
     db.drop_all()
 
+
 @pytest.fixture(scope="function")
 def client(test_app, test_db):
     """Cliente HTTP de test"""
     with test_app.test_client() as client:
         yield client
 
+# Fixtures para libros C:
+
+
+def autor_fixture(test_db):
+    """Crear un autor de prueba"""
+    autor = Autores(
+        nombre_completo="Alexandre Dumas",
+        nacionalidad="Francia"
+    )
+    test_db.session.add(autor)
+    test_db.session.commit()
+    return autor
+
+
+def autores_multiples(test_db):
+    """Crea multiples autores"""
+    autores = [
+        Autores(nombre_completo="Isabel Allende", nacionalidad="Chilena"),
+        Autores(nombre_completo="Jorge Luis Borges", nacionalidad="Argentina"),
+        Autores(nombre_completo="Pablo Neruda", nacionalidad="Chilena"),
+    ]
+    test_db.session.add_all(autores)
+    test_db.session.commit()
+    return autores
+
+
 class MockUser:
     """Usuario de prueba"""
-    def __init__(self,role="usuario",is_authenticated=True):
+
+    def __init__(self, role="usuario", is_authenticated=True):
         self.role = role
         self.is_authenticated = is_authenticated
         self.is_active = True
