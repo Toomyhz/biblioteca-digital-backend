@@ -52,7 +52,7 @@ def actualizar_autor_service(id_autor, data):
     try:
         autor = Autores.query.get(id_autor)
         if not autor:
-            return None, "Autor no encontrado", 404
+            return {"error":"Autor no encontrado"}, 404
 
         nombre_completo = data.get("edit_nombre")
         nacionalidad = data.get("edit_nacionalidad")

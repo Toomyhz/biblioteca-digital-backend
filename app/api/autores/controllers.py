@@ -14,15 +14,15 @@ def listar_autores():
 
 
 def actualizar_autor(id_autor):
+    if not id_autor:
+        return({'error': 'El ID del autor es obligatorio'}), 400
     data = request.get_json()
     response, status = actualizar_autor_service(id_autor, data)
 
-    if not id_autor:
-        return({'error': 'El ID del autor es obligatorio'}), 400
-    elif status != 200:
+    if status != 200:
         return({'error': response}), status
 
-    return (response), status
+    return response, status
 
 
 def eliminar_autor(id_autor):

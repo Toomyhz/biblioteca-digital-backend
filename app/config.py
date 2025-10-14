@@ -81,7 +81,12 @@ class DevelopmentConfig(Config):
     
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = 'oracle+oracledb://test_biblioteca:Biblioteca.2025@localhost:1521/?service_name=XEPDB1'
     SQLALCHEMY_ECHO = False
     WTF_CSRF_ENABLED = False
+    SESSION_TYPE = 'cachelib'
+    SESSION_CACHELIB = {
+        'CACHE_TYPE': 'FileSystemCache',
+        'CACHE_DIR': 'instance/flask_cache'
+    }
 
