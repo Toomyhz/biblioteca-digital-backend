@@ -62,4 +62,6 @@ def create_app(config_class=None, testing: bool = False):
         supports_credentials=True
     )
     
+    from app.models.usuarios import Usuarios
+    
     return app
