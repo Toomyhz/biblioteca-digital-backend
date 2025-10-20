@@ -3,6 +3,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_session import Session
 from flask_restx import Api
+from flask_redis import FlaskRedis
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -14,3 +15,5 @@ api_new = Api(
     description="Api para gestión y administración de la Biblioteca Digital",
     doc="/docs"
 )
+
+redis_client = FlaskRedis()

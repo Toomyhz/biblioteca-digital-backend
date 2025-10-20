@@ -1,7 +1,7 @@
 import os
 from flask import Flask
 from flask_cors import CORS
-from app.extensions import db, migrate, login_manager, server_session, api_new
+from app.extensions import db, migrate, login_manager, server_session, api_new, redis_client
 
 def create_app(config_class=None, testing: bool = False):
     app = Flask(__name__)
@@ -20,6 +20,7 @@ def create_app(config_class=None, testing: bool = False):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     api_new.init_app(app)
+    redis_client.init_app(app)
 
     # Configuración Oracle
     tns = app.config.get("TNS_ADMIN")

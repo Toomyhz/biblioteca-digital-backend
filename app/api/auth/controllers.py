@@ -1,27 +1,39 @@
 from flask import jsonify,make_response, session
-
 import redis,os,time
 from .helpers import oauth, oauth_ok
 from .services import _exchange_code_for_tokens, _require_domain, _verify_id_token
+from .user_service import buscar_o_crear_usuario
+from app.extensions import redis_client
+from flask_login import login_user
 
 
-myredis = redis.from_url(os.getenv("REDIS_URL"))
+STATE_EXPIRATION_SECONDS = 300
+
+
 
 def manejar_callback(request):
+
     state = request.args.get("state")
     code = request.args.get("code")
 
-    value = myredis.get(f"oauth:{state}")
+    # 1. Validar estado desde Redis
+    redis_key = f"oauth:{state}"
+    value = redis_client.get(redis_key)
     if not value:
         return oauth("invalid_state")
     
-    nonce_redis,ts_redis = value.decode().split(":")
+    try:
+        nonce_redis,ts_redis_str = value.decode().split(":")
+        ts_redis = int(ts_redis_str)
 
-    # 2. Validar estado y tiempo de expiración
-    now = int(time.time())
-    if (now - int(ts_redis) > 300):
+    except (ValueError, TypeError):
+        return oauth("invalid_state_format")
+
+    # 2. Validar tiempo de expiración
+    if time.time() - ts_redis > STATE_EXPIRATION_SECONDS:
         return oauth("expired_state")
 
+    # 3.Intercambiar código por tokens y verificar
     try:
         token_payload = _exchange_code_for_tokens(code)
         idt = token_payload.get("id_token")
@@ -29,29 +41,24 @@ def manejar_callback(request):
     except Exception:
         return oauth("token_exchange_failed")
     
-    # 3. Validar nonce
+    # 4. Validar nonce
     if (not claims) or claims.get("nonce") != nonce_redis:
         return oauth("invalid_nonce")
-    # 4. Validar email  y dominio
+    
+    # 3. Validar email  y dominio
     email = claims.get("email")
-    email_verified = claims.get("email_verified")
-    if not email or not email_verified:
-        return oauth("email_unverified")
-
-    if not _require_domain(email):
-        return oauth("invalid_domain")
-
+    if not claims.get("email_verified") or not _require_domain(email):
+        return oauth("email_unverified or invalid_domain")
 
     # 6. Upsert de usuario en BD
-    from .user_service import buscar_o_crear_usuario
     user = buscar_o_crear_usuario(claims)
+    if not user:
+        return oauth("user_provisioning_failed")
     
     # 7. LOG IN del usuario (crear sesión)
-    session.permanent = True
-    session.modified = False
-
-    from flask_login import login_user
     login_user(user,remember=False)
-    myredis.delete(f"oauth:{state}")
+    session.permanent = True
+
+    redis_client.delete(redis_key)
 
     return oauth_ok()

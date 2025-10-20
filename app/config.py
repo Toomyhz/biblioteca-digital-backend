@@ -13,23 +13,11 @@ class Config:
     TOKEN_URL = os.getenv("TOKEN_URL")
     PDF_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
     IMAGE_CACHE_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_imagen')
+    
 
 
 class ProductionConfig(Config):
     DEBUG = False
-    # Aquí puedes agregar configuraciones específicas para producción
-    # Por ejemplo, configuración de base de datos diferente, etc.
-    SESSION_TYPE = 'filesystem'
-    SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
-    SESSION_PERMANENT = True
-    SESSION_USE_SIGNER = True
-    SESSION_KEY_PREFIX = 'sess:'  # opcional
-
-    SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = True  # Asegúrate de usar HTTPS en producción
-    PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
-
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -62,7 +50,7 @@ class DevelopmentConfig(Config):
     "pool_recycle": 1800,        # Recicla conexiones cada 30 min (ajústalo al timeout de Oracle)
     "pool_size": 5,              # Número de conexiones activas
     "max_overflow": 10,          # Conexiones extra si hay carga alta
-}
+    }
     # Sesiones, revisar
     SESSION_TYPE = 'redis'
     SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
@@ -76,6 +64,9 @@ class DevelopmentConfig(Config):
     PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
     SESSION_REFRESH_EACH_REQUEST = False
 
+    # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
+    REDIS_URL=redis.from_url(os.getenv("REDIS_URL"))
+
     
     
 class TestingConfig(Config):
@@ -88,9 +79,12 @@ class TestingConfig(Config):
         'CACHE_TYPE': 'FileSystemCache',
         'CACHE_DIR': 'instance/flask_cache'
     }
-        # Configuración de Google OAuth
+    # Configuración de Google OAuth
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
     OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI")
     ALLOWED_EMAIL_DOMAINS = os.getenv("ALLOWED_EMAIL_DOMAINS")
+
+    # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
+    REDIS_URL=redis.from_url(os.getenv("REDIS_URL"))
 
