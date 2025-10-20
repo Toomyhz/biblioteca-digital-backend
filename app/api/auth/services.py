@@ -2,8 +2,15 @@ from flask import current_app
 from urllib.parse import urlencode
 import os, secrets, time, requests, redis
 
-myredis = redis.from_url(os.getenv("REDIS_URL"))
+myredis = None
 
+def get_redis():
+    """Devuelve la instancia de Redis (lazy initialization)."""
+    global myredis
+    if myredis is None:
+        url = os.getenv("REDIS_URL")
+        myredis = redis.from_url(url)
+    return myredis
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -16,7 +23,9 @@ def _build_google_auth_url():
     nonce = secrets.token_urlsafe(24)
     ts = int(time.time())
 
-    myredis.setex(f"oauth:{state}",300,f"{nonce}:{ts}")
+    r = get_redis()
+
+    r.setex(f"oauth:{state}",300,f"{nonce}:{ts}")
 
     params = {
         "client_id": current_app.config["GOOGLE_CLIENT_ID"],
@@ -41,9 +50,9 @@ def _exchange_code_for_tokens(code: str):
         "redirect_uri": current_app.config["OAUTH_REDIRECT_URI"],
         "grant_type": "authorization_code",
     }
-    r = requests.post(GOOGLE_TOKEN_URL, data=data, timeout=15)
-    r.raise_for_status()
-    return r.json()  # { access_token, id_token, refresh_token?, expires_in, ... }
+    req = requests.post(GOOGLE_TOKEN_URL, data=data, timeout=15)
+    req.raise_for_status()
+    return req.json()  # { access_token, id_token, refresh_token?, expires_in, ... }
 
 def _verify_id_token(idt: str):
     # Verifica firma y audiencia del token

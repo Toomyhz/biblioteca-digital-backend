@@ -66,7 +66,6 @@ class DevelopmentConfig(Config):
     # Sesiones, revisar
     SESSION_TYPE = 'redis'
     SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
-    # SESSION_FILE_DIR = os.path.join(os.path.dirname(__file__), 'sessions')
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
     SESSION_KEY_PREFIX = 'sess:'  # opcional
@@ -89,4 +88,9 @@ class TestingConfig(Config):
         'CACHE_TYPE': 'FileSystemCache',
         'CACHE_DIR': 'instance/flask_cache'
     }
+        # Configuración de Google OAuth
+    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+    OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI")
+    ALLOWED_EMAIL_DOMAINS = os.getenv("ALLOWED_EMAIL_DOMAINS")
 

@@ -16,4 +16,4 @@ class Usuarios(db.Model, UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id:str):
-    return Usuarios.query.get(int(user_id))
+        return db.session.get(Usuarios,int(user_id))
