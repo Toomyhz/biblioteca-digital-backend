@@ -1,9 +1,11 @@
 from app.models.usuarios import Usuarios
-from app import db
+from app.extensions import db
+from sqlalchemy import select
 
 def buscar_o_crear_usuario(claims):
     email = claims.get("email")
-    user = Usuarios.query.filter_by(correo_institucional=email).first()
+    stmt = select(Usuarios).where(Usuarios.correo_institucional == email)
+    user = db.session.execute(stmt).scalar_one_or_none()
     if not user:
         # Crear nuevo usuario
         user = Usuarios(

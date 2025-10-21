@@ -65,7 +65,7 @@ class DevelopmentConfig(Config):
     SESSION_REFRESH_EACH_REQUEST = False
 
     # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
-    REDIS_URL=redis.from_url(os.getenv("REDIS_URL"))
+    REDIS_URL=os.getenv("REDIS_URL")
 
     
     
@@ -74,11 +74,23 @@ class TestingConfig(Config):
     SQLALCHEMY_DATABASE_URI = 'oracle+oracledb://test_biblioteca:Biblioteca.2025@localhost:1521/?service_name=XEPDB1'
     SQLALCHEMY_ECHO = False
     WTF_CSRF_ENABLED = False
-    SESSION_TYPE = 'cachelib'
-    SESSION_CACHELIB = {
-        'CACHE_TYPE': 'FileSystemCache',
-        'CACHE_DIR': 'instance/flask_cache'
-    }
+
+    SECRET_KEY = os.getenv("SECRET_KEY")
+
+    # Sesiones, revisar
+    SESSION_TYPE = 'redis'
+    SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
+    SESSION_PERMANENT = False
+    SESSION_USE_SIGNER = True
+    SESSION_KEY_PREFIX = 'sess:'  # opcional
+
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
+    PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+    SESSION_REFRESH_EACH_REQUEST = False
+
+
     # Configuración de Google OAuth
     GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -86,5 +98,5 @@ class TestingConfig(Config):
     ALLOWED_EMAIL_DOMAINS = os.getenv("ALLOWED_EMAIL_DOMAINS")
 
     # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
-    REDIS_URL=redis.from_url(os.getenv("REDIS_URL"))
+    REDIS_URL=os.getenv("REDIS_URL")
 

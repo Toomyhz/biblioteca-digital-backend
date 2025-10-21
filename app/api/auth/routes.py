@@ -24,7 +24,7 @@ class CurrentUser(Resource):
     def get(self):
         '''Obtiene la información del usuario actualmente logueado'''
         if not current_user.is_authenticated:
-            return {"is_authenticated":False,"user":None},200
+            return {"is_authenticated":False,"user":None},401
         
         return{
             "is_authenticated": True,

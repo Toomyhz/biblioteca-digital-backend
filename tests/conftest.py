@@ -44,51 +44,69 @@ def client(app, test_db):
     return app.test_client()
 
 class MockUser:
-    """Usuario simulado para pruebas"""
-    def __init__(self,rol="usuario",is_authenticated=True):
+    """
+    Un usuario simulado y más detallado para pruebas, compatible con la fixture login_as.
+    """
+    def __init__(self, id="1", rol="usuario", is_authenticated=True):
+        self.id = id  # Atributo 'id' requerido por la fixture 'login_as'
+        self.id_usuario = id #Viene de nuestro modelo
+        self.rol = rol
         self._is_authenticated = is_authenticated
-        self.id_usuario = "1"
+        
+        # Atributos adicionales para tests más detallados
         self.correo_institucional = "tomas.hernandez@umce.cl"
         self.nombre_usuario = "Tomás Hernández"
-        self.foto_perfil = "foto_perfil.png"
-        self.rol = rol
-    
-    @property
-    def is_authenticated(self):
-        return self._is_authenticated
+        self.foto_perfil = "foto_perfil_test.png"
 
-    # Métodos requeridos por Flask-Login
     @property
     def is_active(self):
         return True
+
+    @property
+    def is_authenticated(self):
+        return self._is_authenticated
 
     @property
     def is_anonymous(self):
         return not self.is_authenticated
 
     def get_id(self):
-        return "1"
+        """Devuelve el ID del usuario como string, requerido por Flask-Login."""
+        return str(self.id)
+
 
 @pytest.fixture
-def login_as(app,client):
+def login_as(client):
     """
-    Fixture para loguear a un usuario simulado con un rol específico.
+    Fixture para loguear a un usuario simulado.
+    Registra un user_loader temporal para el test y lo restaura después.
     """
     user_store = {}
 
+    # 1. Guarda el user_loader original para poder restaurarlo después.
+    original_loader = login_manager.user_loader
+
+    # 2. Define y registra nuestro user_loader simulado.
+    def _mock_user_loader(user_id):
+        return user_store.get(user_id)
+    login_manager.user_loader(_mock_user_loader)
+
+    # 3. La función que los tests usarán para "iniciar sesión".
     def _login(rol):
         user = MockUser(rol=rol)
-        user_store["1"] = user
-        
-        with app.test_request_context():
-            login_user(user)
+        user_store[user.id] = user
+        with client.session_transaction() as session:
+            session['_user_id'] = user.id
+            session['_fresh'] = True
     
-    with patch.object(login_manager,'user_loader') as mock_user_loader:
-        mock_user_loader.side_effect = lambda user_id: user_store.get(user_id)
-        yield _login
+    # 4. Entrega el control al test.
+    yield _login
 
-    with app.test_request_context():
-        logout_user()
+    # 5. Limpieza: restaura el user_loader original.
+    login_manager._user_loader = original_loader
+    with client.session_transaction() as session:
+        session.clear()
+
 
 @pytest.fixture(scope="function",autouse=True)
 def mock_redis(monkeypatch):
