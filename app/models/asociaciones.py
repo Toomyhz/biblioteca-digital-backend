@@ -1,4 +1,4 @@
-from app import db
+from app.extensions import db
 
 libros_autores = db.Table(
     "libros_autores",

@@ -59,7 +59,7 @@ def actualizar_autor_service(id_autor, data):
         slug_autor = generar_slug(nombre_completo, id_autor)
 
         if not nombre_completo:
-            return None, "El nombre del autor es obligatorio", 400
+            return {"error":"El nombre del autor es obligatorio"}, 400
 
         autor.nombre_completo = nombre_completo
         autor.nacionalidad = nacionalidad

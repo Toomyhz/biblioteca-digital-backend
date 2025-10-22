@@ -22,5 +22,4 @@ class Lector(Resource):
         else:
             return {"error": "Libro no encontrado"}, 404
     
-
         return send_file(ruta, mimetype="application/pdf")
