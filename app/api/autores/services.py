@@ -41,7 +41,7 @@ def agregar_autor_service(data):
 def listar_autores_service():
     try:
         autores = Autores.query.order_by(Autores.id_autor.asc()).all()
-        autores_dict = [autor.to_dict() for autor in autores]
+        autores_dict = [autor.to_dict_basic() for autor in autores]
         return autores_dict, 200
     except Exception as e:
         db.session.rollback()
@@ -52,7 +52,7 @@ def actualizar_autor_service(id_autor, data):
     try:
         autor = Autores.query.get(id_autor)
         if not autor:
-            return {"error":"Autor no encontrado"}, 404
+            return {"error": "Autor no encontrado"}, 404
 
         nombre_completo = data.get("edit_nombre")
         nacionalidad = data.get("edit_nacionalidad")
