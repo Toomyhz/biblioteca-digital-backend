@@ -1,11 +1,9 @@
 import re
 import unicodedata
 
-def generar_slug(texto, id=None):
+def generar_slug(texto, id=""):
     if not texto:
         return None
-    if not id:
-        id = ""
     # Normalizar para quitar tildes, acentos y caracteres especiales
     texto = unicodedata.normalize('NFKD', texto).encode(
         'ascii', 'ignore').decode('utf-8')
@@ -13,4 +11,4 @@ def generar_slug(texto, id=None):
     texto = texto.lower()
     # Reemplazar espacios y caracteres especiales por guiones
     texto = re.sub(r'[^a-z0-9]+', '-', texto).strip('-')
-    return texto if id +"-"+ id else f"{texto}-{id}"
+    return f"{texto}-{id}" if id else texto

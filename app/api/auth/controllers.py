@@ -48,7 +48,7 @@ def manejar_callback(request):
     # 3. Validar email  y dominio
     email = claims.get("email")
     if not claims.get("email_verified") or not _require_domain(email):
-        return oauth("email_unverified or invalid_domain")
+        return oauth("email_unverified_or_invalid_domain")
 
     # 6. Upsert de usuario en BD
     user = buscar_o_crear_usuario(claims)

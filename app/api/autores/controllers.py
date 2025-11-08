@@ -1,26 +1,65 @@
-from flask import request
+from sqlalchemy.exc import IntegrityError,DataError
+from app.extensions import db
 from app.api.autores.services import agregar_autor_service, actualizar_autor_service, eliminar_autor_service, listar_autores_service
+from app.api.exceptions import NotFoundError, RegistroExistenteError
 
 
-def agregar_autor():
-    data = request.get_json()
-    response, status = agregar_autor_service(data)
-    return(response), status
+def agregar_autor(data):
+    """Lógica de orquestación para agregar un autor"""
+    try:
+        autor = agregar_autor_service(data)
+        db.session.commit()
+        return autor
+    
+    except RegistroExistenteError as e:
+        db.session.rollback()
+        raise e
+    except IntegrityError:
+        db.session.rollback()
+        raise RegistroExistenteError("Ya existe un autor con ese slug o nombre.")
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def listar_autores(busqueda=None):
+    """Obtener todos los autores"""
+    autores = listar_autores_service(busqueda)
+    return autores
 
 
-def listar_autores():
-    response, status = listar_autores_service()
-    return(response), status
-
-
-def actualizar_autor(id_autor):    
-    data = request.get_json()
-    response, status = actualizar_autor_service(id_autor, data)
-
-    return response, status
-
+def actualizar_autor(id_autor,data):
+    """Actualizar un autor existente"""
+    try:
+        autor = actualizar_autor_service(id_autor, data)
+        db.session.commit()
+        return autor
+    except NotFoundError as e:
+        db.session.rollback()
+        raise e
+    
+    except IntegrityError:
+        db.session.rollback()
+        raise RegistroExistenteError("El autor actualizado entra en conflicto con otro existente.")
+    except Exception as e:
+        db.session.rollback()
+        raise e
 
 def eliminar_autor(id_autor):
-    response, status = eliminar_autor_service(id_autor)
-
-    return response, status
+    """Eliminar un autor existente"""
+    try:
+        eliminar_autor_service(id_autor)
+        db.session.commit()
+        return {"mensaje":"Autor eliminado"}
+    
+    except NotFoundError as e:
+        db.session.rollback()
+        raise e
+    
+    except IntegrityError:
+        db.session.rollback()
+        raise RegistroExistenteError("No se puede eliminar este autor: está asociado a uno o más libros")
+    
+    except Exception as e:
+        db.session.rollback()
+        raise e
+        

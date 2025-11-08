@@ -1,8 +1,8 @@
 import os
-from flask import Flask
+from flask import Flask, jsonify
 from flask_cors import CORS
 from app.extensions import db, migrate, login_manager, server_session, api_new, redis_client
-
+from app.api.exceptions import NotFoundError, RegistroExistenteError
 
 def create_app(config_class=None, testing: bool = False):
     app = Flask(__name__)
@@ -66,4 +66,18 @@ def create_app(config_class=None, testing: bool = False):
     
     from app.models.usuarios import Usuarios
     
+    # Registrar manejadores de error globales
+    register_error_handlers(app)
+    
     return app
+
+def register_error_handlers(app):
+    """Registra manejadores globales de errores personalizados"""
+
+    @app.errorhandler(RegistroExistenteError)
+    def handle_existing_error(e):
+        return jsonify({"error": str(e)}), 400
+
+    @app.errorhandler(NotFoundError)
+    def handle_not_found(e):
+        return jsonify({"error": str(e)}), 404

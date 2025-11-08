@@ -1,39 +1,52 @@
-from flask import Blueprint, request
+from flask_restx import  Resource
 from app.api.auth.access_control import roles_required
+from app.api.decorators import rest_endpoint
+from .models import AutorInput, AutorOutput, AutorListM
+from . import autores_sn
+from app.api.autores.controllers import agregar_autor,actualizar_autor,eliminar_autor,listar_autores
+from flask import request
 
-
-
-from flask_restx import Namespace, Resource
-# Namespace
-autores_sn = Namespace('autores',description="Operaciones relacionadas con los autores")
 
 # "Resource" para la colección
 @autores_sn.route("/")
 class AutorList(Resource):
     @autores_sn.doc("list_autores")
+    @autores_sn.param(
+    "busqueda",
+    "Texto de búsqueda (nombre o nacionalidad del autor)",
+    type=str,
+    required=False
+    )
+    @rest_endpoint(autores_sn,output_model=AutorListM)
     def get(self):
         '''Listar todos los autores'''
-        from app.api.autores.controllers import listar_autores
-        return listar_autores()
+        busqueda = request.args.get("busqueda", type=str)
+        return listar_autores(busqueda)
     
+    @autores_sn.doc("create_autor")
+    @rest_endpoint(autores_sn,input_model=AutorInput,output_model=AutorOutput,code=201)
     def post(self):
         '''Agregar nuevo autor'''
-        from app.api.autores.controllers import agregar_autor
-        return agregar_autor()
+        data = autores_sn.payload
+        return agregar_autor(data)
 
+# Resource para individual
 @autores_sn.route("/<int:id_autor>")
 @autores_sn.param("id_autor", "El identificador del autor")
 class Autor(Resource):
+    @autores_sn.doc("update_autor")
+    @rest_endpoint(autores_sn,input_model=AutorInput,output_model=AutorOutput)
     def put(self,id_autor):
         '''Actualizar autor existente'''
+        data = autores_sn.payload
         id_autor = str(id_autor)
-        from app.api.autores.controllers import actualizar_autor
-        return actualizar_autor(id_autor)
+        return actualizar_autor(id_autor,data)
 
+    @autores_sn.doc("delete_autor")
+    @rest_endpoint(autores_sn)
     def delete(self, id_autor):
         '''Eliminar un autor'''
         id_autor = str(id_autor)
-        from app.api.autores.controllers import eliminar_autor
         return eliminar_autor(id_autor)
 
 
