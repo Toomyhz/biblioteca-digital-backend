@@ -9,10 +9,11 @@ class Libros(db.Model):
                          db.Sequence("libros_seq", start=1, increment=1),
                          primary_key=True)
     titulo = db.Column(db.String(255), nullable=False)
-    isbn = db.Column(db.String(50), nullable=False)
+    isbn = db.Column(db.String(50), nullable=True)
     anio_publicacion = db.Column(db.Integer, nullable=True)
     estado = db.Column(db.String(50), default='disponible')
-    archivo_pdf = db.Column(db.String(255), nullable=False)
+    archivo_pdf = db.Column(db.String(255), nullable=True)
+    archivo_portada = db.Column(db.String(255), nullable=True)
     slug_titulo = db.Column(db.String(300), unique=True, nullable=False)
 
     autores = db.relationship(
@@ -34,6 +35,7 @@ class Libros(db.Model):
             "anio_publicacion": self.anio_publicacion,
             "estado": self.estado,
             "archivo_pdf": self.archivo_pdf,
+            "archivo_portada": self.archivo_portada,
             "slug_titulo": self.slug_titulo,
         }
 
@@ -45,6 +47,7 @@ class Libros(db.Model):
             "anio_publicacion": self.anio_publicacion,
             "estado": self.estado,
             "archivo_pdf": self.archivo_pdf,
+            "archivo_portada": self.archivo_portada,
             "slug_titulo": self.slug_titulo,
         }
         if include_autores:

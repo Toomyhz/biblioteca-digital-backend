@@ -59,6 +59,5 @@ def eliminar_autor_service(id_autor):
         autor = Autores.query.get(id_autor)
         if not autor:
             raise NotFoundError("El id no pertenece a ningún autor.")
-
         db.session.delete(autor)
         return None

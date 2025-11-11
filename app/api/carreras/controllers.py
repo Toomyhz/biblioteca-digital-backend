@@ -38,11 +38,8 @@ def validar_id_carrera(id_carrera: str) -> int:
 @safe_controller
 def listar_carreras():
     """Listar todas las carreras."""
-    response, status = leer_carreras_service()
-    if status >= 400:
-        raise ValidationError(response.get(
-            "error", "Error al listar carreras"))
-    return response, status
+    carreras  = leer_carreras_service()
+    return {"data":carreras}
 
 
 @safe_controller

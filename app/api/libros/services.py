@@ -19,26 +19,22 @@ from app.models.carreras import Carreras
 from app.models.libros import Libros
 from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from sqlalchemy import or_, text, func, literal, desc
 import os
+from app.api.exceptions import NotFoundError, ServiceError
+import fitz
 
 UPLOAD_FOLDER = Config.PDF_UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'pdf'}
 
 # Funcion para evitar subir archivos que no sean pdf
-
-
 def archivos_permitidos(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def listar_libros_service():
+def listar_libros_service(pagina, limite, busqueda):
     try:
-        pagina = request.args.get("pagina", 1, type=int)
-        limite = request.args.get("limite", 10, type=int)
-        busqueda = request.args.get("busqueda", "", type=str)
-
         # Para Oracle
         db.session.execute(text("ALTER SESSION SET NLS_COMP = LINGUISTIC"))
         db.session.execute(text("ALTER SESSION SET NLS_SORT = BINARY_AI"))
@@ -93,7 +89,7 @@ def listar_libros_service():
                 "total": paginacion.total,
                 "total_paginas": paginacion.pages
             }
-        }, 200
+        }
 
     except Exception as e:
         db.session.rollback()
@@ -103,85 +99,87 @@ def listar_libros_service():
         return {'error': f'Error al listar libros: {str(e)}'}, 500
 
 
-def agregar_libro_service(data, archivo):
+def agregar_libro_service(data):
+    titulo = data.get("titulo")
+    slug_inicial = generar_slug(titulo)
+
+    nuevo_libro = Libros(
+        titulo=titulo,
+        isbn=data.get("isbn"),
+        estado=data.get("estado"),
+        anio_publicacion=data.get("anio_publicacion"),
+        slug_titulo=slug_inicial,
+        archivo_pdf=None,
+        archivo_portada=None,
+    )
+    db.session.add(nuevo_libro)
+
+    # Agregar registro a la tabla de asociación libros_autores si se proporciona id_autor
+    autores_ids = data.get("ids_autores",[])
+    if autores_ids:
+        nuevo_libro.autores = Autores.query.filter(Autores.id_autor.in_(autores_ids)).all()
+
+    # Agregar registro a la tabla de asociación libros_careras si se proporciona id_carrera
+    carreras_ids = data.get("ids_carreras", [])
+    if carreras_ids:
+        nuevo_libro.carreras = Carreras.query.filter(Carreras.id_carrera.in_(carreras_ids)).all()
+
+    db.session.flush()
+
+    # Cambiar Slug con id
+    nuevo_libro.slug_titulo = generar_slug(titulo, str(nuevo_libro.id_libro))
+    
+    return nuevo_libro
+
+def actualizar_archivo_libro_service(id_libro, archivo_pdf):
+    libro = Libros.query.get(id_libro)
+    if not libro:
+        raise NotFoundError(f'Libro con ID {id_libro} no encontrado.')
+
+    slug_base = libro.slug_titulo or f"libro-{libro.id_libro}"
+    pdf_filename = f"{slug_base}.pdf"
+    portada_filename = f"{slug_base}_portada.png"
+
+    pdf_folder = current_app.config['PDF_UPLOAD_FOLDER']
+    portada_folder = current_app.config['PORTADA_UPLOAD_FOLDER']
+
+    os.makedirs(pdf_folder, exist_ok=True) 
+    os.makedirs(portada_folder, exist_ok=True) 
+    
+    pdf_path = os.path.join(pdf_folder, pdf_filename)
+    portada_path = os.path.join(portada_folder, portada_filename)
+
+    # 3. Leer el PDF en memoria
     try:
-        titulo = data.get("new_titulo")
-        isbn = data.get("new_isbn")
-        anio_publicacion = data.get("new_anio_publicacion")
-        estado = data.get("new_estado")
-        slug_inicial = generar_slug(titulo) if titulo else "slug-temporal"
+        pdf_bytes = archivo_pdf.read()
+    except Exception as e:
+        raise ServiceError(f'No se pudo leer el archivo: {str(e)}', 400)
 
-        if not titulo:
-            return {'error': 'El título es obligatorio'}, 400
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
-        pdf_filename = None
-        if 'pdf' in archivo:
-            pdf_file = archivo['pdf']
-            if pdf_file and pdf_file.filename and archivos_permitidos(pdf_file.filename):
-                pdf_filename = f"{isbn}_{slug_inicial}.pdf" if isbn else f"{slug_inicial}.pdf"
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                pdf_file.save(os.path.join(UPLOAD_FOLDER, pdf_filename))
-
-            else:
-                return {'error': 'Archivo no permitido, solo se permiten PDFs'}, 400
-
-        nuevo_libro = Libros(
-            titulo=titulo,
-            isbn=isbn,
-            estado=estado,
-            anio_publicacion=anio_publicacion,
-            archivo_pdf=pdf_filename,
-            slug_titulo=slug_inicial
-        )
-
-        db.session.add(nuevo_libro)
-        db.session.flush()
-
-        # Cambiar Slug con id
-        nuevo_libro.slug_titulo = generar_slug(
-            titulo, str(nuevo_libro.id_libro))
-
-        # Agregar registro a la tabla de asociación libros_autores si se proporciona id_autor
-        autores_ids = data.getlist("new_id_autor") or []
-        if not autores_ids:
-            autor_id = data.get("new_id_autor")
-            if autor_id:
-                autores_ids = [autor_id]
-        autores_ids = [int(a) for a in autores_ids if a]
-
-        if autores_ids:
-            nuevo_libro.autores = Autores.query.filter(
-                Autores.id_autor.in_(autores_ids)
-            ).all()
-
-        # Agregar registro a la tabla de asociación libros_careras si se proporciona id_carrera
-        carreras_ids = data.get("new_id_carrera") or []
-        if not carreras_ids:
-            carrera_id = data.get("new_id_carrera")
-            if carrera_id:
-                carreras_ids = [carrera_id]
-
-        if isinstance(carreras_ids, str):
-            carreras_ids = [int(carreras_ids)]
-        elif isinstance(carreras_ids, int):
-            carreras_ids = [carreras_ids]
-        else:
-            carreras_ids = [int(c) for c in carreras_ids if c]
-        if carreras_ids:
-            nuevo_libro.carreras = Carreras.query.filter(
-                Carreras.id_carrera.in_(carreras_ids)
-            ).all()
-
-        db.session.commit()
-
-        return {
-            'mensaje': 'Libro agregado correctamente',
-            'libro': nuevo_libro.to_dict()
-        }, 201
+        page = doc[0]
+        
+        pix = page.get_pixmap(dpi=300)
+        
+        pix.save(portada_path)
+        doc.close()
+        
+        with open(pdf_path, 'wb') as f:
+            f.write(pdf_bytes)
 
     except Exception as e:
-        db.session.rollback()
-        return {'error': f'Error al crear libro: {e}'}, 500
+        # Si PyMuPDF falla (ej. PDF corrupto), limpia los archivos creados
+        if os.path.exists(portada_path):
+            os.remove(portada_path)
+        raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
+
+    # 5. Actualizar el modelo (SIN COMMIT)
+    libro.archivo_pdf = pdf_filename
+    libro.archivo_portada = portada_filename
+    
+    # Devuelve el objeto, el controlador hará el commit
+    return libro
 
 
 def actualizar_libro_service(id_libro, data, archivo):
@@ -260,72 +258,24 @@ def actualizar_libro_service(id_libro, data, archivo):
 
 
 def eliminar_libro_service(id_libro):
-    try:
-        libro = Libros.query.get(id_libro)
-        if not libro:
-            return {'error': 'Libro no encontrado'}, 404
+    libro = Libros.query.get(id_libro)
+    if not libro:
+        raise NotFoundError(f"Libro con ID {id_libro} no encontrado")
 
-        # Eliminar archivo PDF asociado si existe
-        if libro.archivo_pdf:
-            pdf_path = os.path.join(UPLOAD_FOLDER, libro.archivo_pdf)
-            if os.path.exists(pdf_path):
-                os.remove(pdf_path)
+    pdf_folder = current_app.config["PDF_UPLOAD_FOLDER"]
+    portada_folder = current_app.config["PORTADA_UPLOAD_FOLDER"]
 
-        db.session.delete(libro)
-        db.session.commit()
-
-        return {
-            'mensaje': 'Libro eliminado correctamente',
-            'libro': libro.to_dict()
-        }, 200
-
-    except Exception as e:
-        db.session.rollback()
-        return {'error': f'Error al eliminar libro: {e}'}, 500
+    # Eliminar archivo PDF asociado si existe
+    if libro.archivo_pdf:
+        pdf_path = os.path.join(pdf_folder, libro.archivo_pdf)
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
 
 
-def listar_libros_home_service():
-    try:
-        # Para Oracle
-        db.session.execute(text("ALTER SESSION SET NLS_COMP = LINGUISTIC"))
-        db.session.execute(text("ALTER SESSION SET NLS_SORT = BINARY_AI"))
+    if libro.archivo_portada:
+        pdf_path = os.path.join(portada_folder, libro.archivo_portada)
+        if os.path.exists(pdf_path):
+            os.remove(pdf_path)
 
-        top_carreras = (
-            db.session.query(
-                Carreras,
-                func.count(Libros.id_libro).label("total_libros"))
-            .join(Carreras.libros)
-            .group_by(
-                Carreras.id_carrera,
-                Carreras.nombre_carrera,
-                Carreras.slug_carrera
-            )
-            .order_by(desc("total_libros"))
-            .limit(3)
-            .all()
-        )
-        print(top_carreras)
-
-        data = []
-
-        for carrera, total_libros in top_carreras:
-            libros = (
-                Libros.query
-                .join(Libros.carreras)
-                .filter(Carreras.id_carrera == carrera.id_carrera)
-                .order_by(Libros.id_libro.desc())
-                .limit(5)
-                .all()
-            )
-
-            data.append({
-                "id_carrera": carrera.id_carrera,
-                "nombre_carrera": carrera.nombre_carrera,
-                "total_libros": total_libros,
-                "libros": [libro.to_dict_basic() for libro in libros]
-            })
-
-        return data, 200
-    except Exception as e:
-        db.session.rollback()
-        return {'error': f'Error al mostrar carreras: {e}'}, 500
+    db.session.delete(libro)
+    return libro

@@ -50,12 +50,16 @@ def create_app(config_class=None, testing: bool = False):
     from app.api.lector.routes import lector_ns
     from app.api.biblioteca.routes import biblioteca_ns
 
+    from app.api.uploads import uploads_bp
+
     api_new.add_namespace(libros_sn, path='/api/libros')
     api_new.add_namespace(autores_sn, path='/api/autores')
     api_new.add_namespace(carreras_sn, path='/api/carreras')
     api_new.add_namespace(auth_ns, path="/api/auth")
     api_new.add_namespace(lector_ns, path="/api/lector")
     api_new.add_namespace(biblioteca_ns, path="/api/biblioteca")
+
+    app.register_blueprint(uploads_bp,url_prefix = "/static")
 
     # CORS
     CORS(

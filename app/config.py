@@ -12,7 +12,7 @@ class Config:
     REDIRECT_URI = os.getenv("redirect_uri")
     TOKEN_URL = os.getenv("TOKEN_URL")
     PDF_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
-    IMAGE_CACHE_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_imagen')
+    PORTADA_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_portada')
     
 
 

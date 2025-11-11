@@ -9,7 +9,7 @@ def agregar_autor(data):
     try:
         autor = agregar_autor_service(data)
         db.session.commit()
-        return autor
+        return {"mensaje":"Autor agregado correctamente","autor":autor}, 201
     
     except RegistroExistenteError as e:
         db.session.rollback()
@@ -20,11 +20,12 @@ def agregar_autor(data):
     except Exception as e:
         db.session.rollback()
         raise e
+    
 
 def listar_autores(busqueda=None):
     """Obtener todos los autores"""
     autores = listar_autores_service(busqueda)
-    return autores
+    return {"data":autores}
 
 
 def actualizar_autor(id_autor,data):
@@ -32,7 +33,7 @@ def actualizar_autor(id_autor,data):
     try:
         autor = actualizar_autor_service(id_autor, data)
         db.session.commit()
-        return autor
+        return {"mensaje":"Autor actualizado correctamente","autor":autor}
     except NotFoundError as e:
         db.session.rollback()
         raise e
@@ -49,7 +50,7 @@ def eliminar_autor(id_autor):
     try:
         eliminar_autor_service(id_autor)
         db.session.commit()
-        return {"mensaje":"Autor eliminado"}
+        return {"mensaje":"Autor eliminado correctamente"}
     
     except NotFoundError as e:
         db.session.rollback()
