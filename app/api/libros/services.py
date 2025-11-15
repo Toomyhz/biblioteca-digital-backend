@@ -24,6 +24,7 @@ from sqlalchemy import or_, text, func, literal, desc
 import os
 from app.api.exceptions import NotFoundError, ServiceError
 import fitz
+import uuid
 
 UPLOAD_FOLDER = Config.PDF_UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -99,7 +100,7 @@ def listar_libros_service(pagina, limite, busqueda):
         return {'error': f'Error al listar libros: {str(e)}'}, 500
 
 
-def agregar_libro_service(data):
+def agregar_libro_service(data, archivo_pdf):
     titulo = data.get("titulo")
     slug_inicial = generar_slug(titulo)
 
@@ -128,21 +129,14 @@ def agregar_libro_service(data):
 
     # Cambiar Slug con id
     nuevo_libro.slug_titulo = generar_slug(titulo, str(nuevo_libro.id_libro))
+
+    db.session.flush()
+
+    pdf_filename = f"{nuevo_libro.slug_titulo}.pdf"
+    portada_filename = f"{nuevo_libro.slug_titulo}_portada.png"
     
-    return nuevo_libro
-
-def actualizar_archivo_libro_service(id_libro, archivo_pdf):
-    libro = Libros.query.get(id_libro)
-    if not libro:
-        raise NotFoundError(f'Libro con ID {id_libro} no encontrado.')
-
-    slug_base = libro.slug_titulo or f"libro-{libro.id_libro}"
-    pdf_filename = f"{slug_base}.pdf"
-    portada_filename = f"{slug_base}_portada.png"
-
     pdf_folder = current_app.config['PDF_UPLOAD_FOLDER']
     portada_folder = current_app.config['PORTADA_UPLOAD_FOLDER']
-
     os.makedirs(pdf_folder, exist_ok=True) 
     os.makedirs(portada_folder, exist_ok=True) 
     
@@ -157,14 +151,10 @@ def actualizar_archivo_libro_service(id_libro, archivo_pdf):
 
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-
         page = doc[0]
-        
         pix = page.get_pixmap(dpi=300)
-        
         pix.save(portada_path)
         doc.close()
-        
         with open(pdf_path, 'wb') as f:
             f.write(pdf_bytes)
 
@@ -173,88 +163,128 @@ def actualizar_archivo_libro_service(id_libro, archivo_pdf):
         if os.path.exists(portada_path):
             os.remove(portada_path)
         raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
+        
+    nuevo_libro.archivo_pdf = pdf_filename
+    nuevo_libro.archivo_portada = portada_filename
 
-    # 5. Actualizar el modelo (SIN COMMIT)
-    libro.archivo_pdf = pdf_filename
-    libro.archivo_portada = portada_filename
+    return nuevo_libro
+
+
+def obtener_libro_service(id_libro):
+    """
+    Servicio para obtener un libro por ID
+    """
+
+    libro = Libros.query.get(id_libro)
     
-    # Devuelve el objeto, el controlador hará el commit
+    if not libro:
+        raise NotFoundError(f'Libro con ID {id_libro} no encontrado.')
+        
     return libro
 
+def actualizar_libro_metadata_service(id_libro, data):
+    libro = Libros.query.get(id_libro)
+    if not libro:
+        raise NotFoundError(f"Libro con ID {id_libro} no encontrado")
 
-def actualizar_libro_service(id_libro, data, archivo):
+    pdf_folder = current_app.config["PDF_UPLOAD_FOLDER"]
+    portada_folder = current_app.config["PORTADA_UPLOAD_FOLDER"]
+
+    plan_filesystem = None
+    
+    if "titulo" in data and data["titulo"] != libro.titulo:
+        nuevo_titulo = data["titulo"]
+        nuevo_slug = generar_slug(nuevo_titulo,str(id_libro))
+
+        path_pdf_antiguo = os.path.join(pdf_folder, libro.archivo_pdf) if libro.archivo_pdf else None
+        path_portada_antigua = os.path.join(portada_folder, libro.archivo_portada) if libro.archivo_portada else None
+
+        nuevo_pdf_filename = f"{nuevo_slug}.pdf"
+        nueva_portada_filename = f"{nuevo_slug}_cover.png"
+
+        path_pdf_nuevo = os.path.join(pdf_folder, nuevo_pdf_filename)
+        path_portada_nueva = os.path.join(portada_folder, nueva_portada_filename)
+        
+        plan_filesystem = {
+            "archivos_a_renombrar":[
+                (path_pdf_antiguo,path_pdf_nuevo),(path_portada_antigua,path_portada_nueva)
+            ]
+        }
+
+        # 2. Actualizar el modelo con los NUEVOS nombres
+        libro.titulo = nuevo_titulo
+        libro.slug_titulo = nuevo_slug
+        libro.archivo_pdf = nuevo_pdf_filename
+        libro.archivo_portada = nueva_portada_filename
+
+    if 'isbn' in data:
+        libro.isbn = data['isbn']
+    if 'anio_publicacion' in data:
+        libro.anio_publicacion = data['anio_publicacion']
+    if 'estado' in data:
+        libro.estado = data['estado']
+    
+    if 'ids_autores' in data:
+        libro.autores = Autores.query.filter(Autores.id_autor.in_(data["ids_autores"])).all()
+    if 'ids_carreras' in data:
+        libro.carreras = Carreras.query.filter(Carreras.id_carrera.in_(data["ids_carreras"])).all()
+
+    return libro, plan_filesystem
+      
+    
+def actualizar_libro_archivo_service(id_libro, archivo_pdf):    
+    libro = Libros.query.get(id_libro)
+    if not libro:
+        raise NotFoundError(f'Libro con ID {id_libro} no encontrado.')
+
+    pdf_folder = current_app.config['PDF_UPLOAD_FOLDER']
+    portada_folder = current_app.config['PORTADA_UPLOAD_FOLDER']
+    
+
+    slug_base = libro.slug_titulo
+    pdf_filename_final = f"{slug_base}.pdf"
+    portada_filename_final = f"{slug_base}_cover.png"
+
+    path_pdf_antiguo = os.path.join(pdf_folder, libro.archivo_pdf) if libro.archivo_pdf else None
+    path_portada_antigua = os.path.join(portada_folder, libro.archivo_portada) if libro.archivo_portada else None
+
+    random_suffix = uuid.uuid4().hex[:8] # String aleatorio
+    pdf_filename_temp = f"{slug_base}_{random_suffix}.tmp.pdf"
+    portada_filename_temp = f"{slug_base}_{random_suffix}.tmp.png"
+
+    path_pdf_temp = os.path.join(pdf_folder, pdf_filename_temp)
+    path_portada_temp = os.path.join(portada_folder, portada_filename_temp)
+
     try:
-        libro = Libros.query.get(id_libro)
-        if not libro:
-            return {'error': 'Libro no encontrado'}, 404
-
-        libro.titulo = data.get("edit_titulo", libro.titulo)
-        libro.isbn = data.get("edit_isbn", libro.isbn)
-        libro.estado = data.get("edit_estado", libro.estado)
-        libro.anio_publicacion = data.get(
-            "edit_anio_publicacion", libro.anio_publicacion)
-        libro.slug_titulo = generar_slug(libro.titulo, str(libro.id_libro))
-        if 'pdf' in archivo:
-            pdf_file = archivo['pdf']
-            if pdf_file and pdf_file.filename and archivos_permitidos(pdf_file.filename):
-                # Eliminar PDF anterior si existe
-                if libro.archivo_pdf:
-                    old_path = os.path.join(UPLOAD_FOLDER, libro.archivo_pdf)
-                    if os.path.exists(old_path):
-                        os.remove(old_path)
-
-                # Guardar nuevo PDF
-                slug_titulo = generar_slug(libro.titulo)
-                pdf_filename = f"{libro.isbn}_{slug_titulo}.pdf" if libro.isbn else f"{slug_titulo}.pdf"
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                pdf_file.save(os.path.join(UPLOAD_FOLDER, pdf_filename))
-                libro.archivo_pdf = pdf_filename
-
-        autores_ids = data.getlist("edit_id_autor")
-        if not autores_ids:
-            autor_id = data.get("edit_id_autor")
-            if autor_id:
-                autores_ids = [autor_id]
-
-        autores_ids = [int(a) for a in autores_ids if a]
-
-        if autores_ids:
-            libro.autores = Autores.query.filter(
-                Autores.id_autor.in_(autores_ids)
-            ).all()
-        else:
-            libro.autores = []
-
-        carreras_ids = data.getlist("edit_id_carrera")
-        if not carreras_ids:
-            carrera_id = data.get("edit_id_carrera")
-            if carrera_id:
-                carreras_ids = [carrera_id]
-
-        if isinstance(carreras_ids, str):
-            carreras_ids = [int(carreras_ids)]
-        elif isinstance(carreras_ids, int):
-            carreras_ids = [carreras_ids]
-        else:
-            carreras_ids = [int(c) for c in carreras_ids if c]
-
-        if carreras_ids:
-            libro.carreras = Carreras.query.filter(
-                Carreras.id_carrera.in_(carreras_ids)
-            ).all()
-        else:
-            libro.carreras = []
-
-        db.session.commit()
-
-        return {
-            'mensaje': 'Libro actualizado correctamente',
-            'libro': libro.to_dict()
-        }, 200
-
+        pdf_bytes = archivo_pdf.read()
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        page = doc[0]
+        pix = page.get_pixmap(dpi=150)
+        pix.save(path_portada_temp)
+        doc.close()
+        
+        with open(path_pdf_temp, 'wb') as f:
+            f.write(pdf_bytes)
+            
     except Exception as e:
-        db.session.rollback()
-        return {'error': f'Error al actualizar libro: {e}'}, 401
+            # Si la escritura del NUEVO archivo falla, limpiamos los .tmp
+            if os.path.exists(path_portada_temp): os.remove(path_portada_temp)
+            if os.path.exists(path_pdf_temp): os.remove(path_pdf_temp)
+            raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
+
+    libro.archivo_pdf = pdf_filename_final
+    libro.archivo_portada = portada_filename_final
+
+    plan_filesystem = {
+        "antiguos_a_borrar": [p for p in [path_pdf_antiguo, path_portada_antigua] if p],
+        "temporales_a_renombrar": [
+            (path_pdf_temp, os.path.join(pdf_folder, pdf_filename_final)),
+            (path_portada_temp, os.path.join(portada_folder, portada_filename_final))
+        ],
+        "temporales_a_borrar_en_fallo": [path_pdf_temp, path_portada_temp]
+    }
+    
+    return libro, plan_filesystem
 
 
 def eliminar_libro_service(id_libro):

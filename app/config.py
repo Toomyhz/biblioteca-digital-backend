@@ -67,6 +67,8 @@ class DevelopmentConfig(Config):
     # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
     REDIS_URL=os.getenv("REDIS_URL")
 
+    FRONT_URL=os.getenv("FRONTEND_URL")
+
     
     
 class TestingConfig(Config):

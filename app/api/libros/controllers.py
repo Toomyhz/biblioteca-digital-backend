@@ -1,36 +1,20 @@
-from flask import request
 from app.extensions import db
-from app.api.libros.services import (agregar_libro_service, actualizar_libro_service
-                                    , eliminar_libro_service, listar_libros_service
-                                    , actualizar_archivo_libro_service)
+from app.api.libros.services import (agregar_libro_service, actualizar_libro_metadata_service, actualizar_libro_archivo_service
+                                    , eliminar_libro_service, listar_libros_service,obtener_libro_service)
 from app.api.exceptions import ServiceError, NotFoundError
+import os
 
+from app.api.libros.utils import _ejecutar_plan_filesystem, _limpiar_temporales_en_fallo
 
-def agregar_libro(data):
+def agregar_libro(data,archivo_pdf):
     try:
-        nuevo_libro = agregar_libro_service(data)
+        nuevo_libro = agregar_libro_service(data,archivo_pdf)
         db.session.commit()
         return {"mensaje":"Libro agregado correctamente","libro":nuevo_libro}, 201
     except Exception as e:
         db.session.rollback()
         raise ServiceError(f"Error en el controlador al agregar libro: {str(e)}")
     
-def actualizar_archivo_libro(id_libro, archivo_pdf):
-    try:
-        libro_actualizado = actualizar_archivo_libro_service(id_libro, archivo_pdf)
-        
-        db.session.commit()
-
-        return {'mensaje': 'Archivo subido y portada generada correctamente','libro': libro_actualizado}
-
-    except (NotFoundError, ServiceError) as e:
-        db.session.rollback()
-        raise e # Vuelve a lanzar para que el Resource lo atrape
-    except Exception as e:
-        db.session.rollback()
-        raise ServiceError(f'Error inesperado en el controlador: {str(e)}')
-
-
 def listar_libros(pagina,limite,busqueda):
     try:
         data = listar_libros_service(pagina,limite,busqueda)
@@ -38,11 +22,57 @@ def listar_libros(pagina,limite,busqueda):
     except Exception as e:
         raise ServiceError(f"Error al listar libros: {e}")
     
-def actualizar_libro(id_libro):
-    data = request.form
-    archivo = request.files
-    response, status = actualizar_libro_service(id_libro, data, archivo)
-    return response, status
+def obtener_libro_por_id(id_libro):
+    """
+    Controlador para obtener un libro por ID (sin UoW)
+    """
+    try:
+        libro = obtener_libro_service(id_libro)
+        # GET no necesita commit, solo devuelve el "sobre"
+        return {
+            'mensaje': 'Libro obtenido correctamente',
+            'libro': libro
+        }
+    except Exception as e:
+        # Vuelve a lanzar para que el Resource lo maneje
+        raise e
+    
+def actualizar_libro(id_libro, data):
+    plan_filesystem = None
+    try:
+        libro_actualizado, plan_filesystem = actualizar_libro_metadata_service(id_libro, data)
+        db.session.commit()
+        if plan_filesystem:
+            for path_antiguo, path_nuevo in plan_filesystem["archivos_a_renombrar"]:
+                if path_antiguo and os.path.exists(path_antiguo):
+                    try:
+                        os.rename(path_antiguo, path_nuevo)
+                    except Exception as e:
+                        print(f"ERROR CRÍTICO: No se pudo renombrar {path_antiguo} a {path_nuevo}: {e}")
+
+        return {"mensaje":"Libro actualizado correctamente","libro":libro_actualizado}, 200
+    except Exception as e:
+        db.session.rollback()
+        raise ServiceError(f"Error en el controlador al agregar libro: {str(e)}")
+
+def actualizar_archivo_libro(id_libro, archivo_pdf):
+    plan_filesystem = None
+    try:
+        libro_actualizado, plan_filesystem = actualizar_libro_archivo_service(id_libro, archivo_pdf)
+        db.session.commit()
+        respuesta =  {'mensaje': 'Archivo y portada actualizados correctamente',
+            'libro': libro_actualizado}
+    
+    except Exception as e:
+        db.session.rollback()
+        if plan_filesystem:
+            _limpiar_temporales_en_fallo(plan_filesystem)
+        raise e 
+
+    if plan_filesystem:
+        _ejecutar_plan_filesystem(plan_filesystem)
+    
+    return respuesta 
 
 def eliminar_libro(id_libro):
     try:

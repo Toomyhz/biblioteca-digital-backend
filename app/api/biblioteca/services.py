@@ -75,7 +75,7 @@ def listar_libros_biblioteca():
         ]
 
         # ----- Autores visibles (máximo 7) -----
-        subquery_ids = query.with_entities(Libros.id_libro).subquery()
+        subquery_ids_query = query.with_entities(Libros.id_libro)
 
         autores_visibles = (
             db.session.query(
@@ -84,7 +84,7 @@ def listar_libros_biblioteca():
                 func.count(Libros.id_libro).label("total_libros")
             )
             .join(Autores.libros)
-            .filter(Libros.id_libro.in_(subquery_ids))
+            .filter(Libros.id_libro.in_(subquery_ids_query.scalar_subquery()))
             .group_by(Autores.id_autor, Autores.nombre_completo)
             .order_by(func.count(Libros.id_libro).desc())
             .limit(7)

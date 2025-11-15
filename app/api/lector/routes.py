@@ -14,7 +14,7 @@ class Lector(Resource):
     def get(self,id_libro):
         '''Retorno pdf de libro'''
         if id_libro == 1:
-            ruta = os.path.join(Config.PDF_UPLOAD_FOLDER, "AJEDREZ-ELEMENTOS-DE-TACTICA.pdf")
+            ruta = os.path.join(Config.PDF_UPLOAD_FOLDER, "ajedrez-cambiante-26.pdf")
         elif id_libro == 2:
             ruta = os.path.join(Config.PDF_UPLOAD_FOLDER, "1984.pdf")
         elif id_libro == 3:
