@@ -12,8 +12,7 @@
         && rm -rf /var/lib/apt/lists/*
 
     # 3. --- INSTALAR ORACLE INSTANT CLIENT ---
-    ENV ORACLE_CLIENT_VERSION=21_14
-    RUN wget https://download.oracle.com/otn_software/linux/instantclient/${ORACLE_CLIENT_VERSION}/instantclient-basiclite-linux.x64-${ORACLE_CLIENT_VERSION}.0.0.0dbru.zip -O oracle.zip && \
+    RUN wget https://download.oracle.com/otn_software/linux/instantclient/2112000/el9/instantclient-basic-linux.x64-21.12.0.0.0dbru.el9.zip -O oracle.zip && \
         unzip oracle.zip && \
         rm oracle.zip && \
         echo /app/instantclient_${ORACLE_CLIENT_VERSION} > /etc/ld.so.conf.d/oracle.conf && \

@@ -64,5 +64,8 @@ def _verify_id_token(idt: str):
 
 def _require_domain(email: str):
     domain = email.split("@")[-1].lower()
-    allowed = current_app.config.get("ALLOWED_EMAIL_DOMAINS").lower()
-    return allowed and (domain == allowed)
+
+    allowed_raw = current_app.config.get("ALLOWED_EMAIL_DOMAINS", "")
+    allowed_domains = [d.strip().lower() for d in allowed_raw.split(",") if d.strip()]
+
+    return domain in allowed_domains
