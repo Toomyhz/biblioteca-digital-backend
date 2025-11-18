@@ -59,7 +59,7 @@ def create_app(config_class=None, testing: bool = False):
     api_new.add_namespace(lector_ns, path="/api/lector")
     api_new.add_namespace(biblioteca_ns, path="/api/biblioteca")
 
-    app.register_blueprint(uploads_bp,url_prefix = "/static")
+    app.register_blueprint(uploads_bp,url_prefix = "/api/static")
 
     # CORS
     CORS(

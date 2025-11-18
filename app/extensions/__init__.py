@@ -13,7 +13,7 @@ api_new = Api(
     version="1.0",
     title="Biblioteca Digital - API",
     description="Api para gestión y administración de la Biblioteca Digital",
-    doc="/docs"
+    doc="/api/docs"
 )
 
 redis_client = FlaskRedis()
