@@ -5,7 +5,7 @@ from .errors import ValidationError, NotFoundError, ServiceError
 
 
 def agregar_carrera_service(data):
-    nombre_carrera = data.get("new_nombre")
+    nombre_carrera = data.get("new_nombre_carrera")
     if not nombre_carrera:
         raise ValidationError("El nombre de la carrera es obligatorio")
 
