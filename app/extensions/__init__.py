@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_session import Session
 from flask_restx import Api
 from flask_redis import FlaskRedis
+from .utils import DigitalOceanSpaces
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -17,3 +18,4 @@ api_new = Api(
 )
 
 redis_client = FlaskRedis()
+cloud_storage = DigitalOceanSpaces()

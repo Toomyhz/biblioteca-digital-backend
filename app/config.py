@@ -14,6 +14,12 @@ class Config:
     PDF_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_pdf')
     PORTADA_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'libros_portada')
     
+    # DigitalOcean
+    DO_SPACES_ENDPOINT=os.getenv("DO_SPACES_ENDPOINT")
+    DO_SPACES_REGION=os.getenv("DO_SPACES_REGION")
+    DO_SPACES_BUCKET=os.getenv("DO_SPACES_BUCKET")
+    DO_SPACES_KEY=os.getenv("DO_SPACES_KEY")
+    DO_SPACES_SECRET=os.getenv("DO_SPACES_SECRET")
 
 
 class ProductionConfig(Config):
