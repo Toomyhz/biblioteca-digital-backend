@@ -1,4 +1,6 @@
-from flask import Blueprint, send_from_directory, current_app
+from flask import Blueprint, send_from_directory, current_app, jsonify, redirect
+from app.extensions import cloud_storage
+from app.models.libros import Libros
 
 uploads_bp = Blueprint('uploads', __name__)
 
@@ -13,10 +15,20 @@ def servir_portada(filename):
     # send_from_directory es la forma SEGURA de servir archivos
     return send_from_directory(portada_folder, filename)
 
-@uploads_bp.route('/pdfs/<path:filename>')
-def servir_pdf(filename):
+@uploads_bp.route('/leer/<int:id_libro>')
+def get_presigned_url(id_libro):
     """
     Sirve un archivo PDF.
     """
-    pdf_folder = current_app.config['PDF_UPLOAD_FOLDER']
-    return send_from_directory(pdf_folder, filename)
+    libro = Libros.query.get_or_404(id_libro)
+
+    if not libro.archivo_pdf:
+        return jsonify({"mensaje": "El libro no tiene un archivo PDF asociado."}), 404
+    
+    url_firmada = cloud_storage.get_presigned_url(libro.archivo_pdf, expiration=300)
+    if not url_firmada:
+        return jsonify({"mensaje": "No se pudo generar la URL del archivo."}), 500
+    return jsonify({
+    'status': 'success',
+    'url': url_firmada
+})

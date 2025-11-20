@@ -38,17 +38,9 @@ def obtener_libro_por_id(id_libro):
         raise e
     
 def actualizar_libro(id_libro, data):
-    plan_filesystem = None
     try:
         libro_actualizado, plan_filesystem = actualizar_libro_metadata_service(id_libro, data)
         db.session.commit()
-        if plan_filesystem:
-            for path_antiguo, path_nuevo in plan_filesystem["archivos_a_renombrar"]:
-                if path_antiguo and os.path.exists(path_antiguo):
-                    try:
-                        os.rename(path_antiguo, path_nuevo)
-                    except Exception as e:
-                        print(f"ERROR CRÍTICO: No se pudo renombrar {path_antiguo} a {path_nuevo}: {e}")
 
         return {"mensaje":"Libro actualizado correctamente","libro":libro_actualizado}, 200
     except Exception as e:
@@ -56,23 +48,16 @@ def actualizar_libro(id_libro, data):
         raise ServiceError(f"Error en el controlador al agregar libro: {str(e)}")
 
 def actualizar_archivo_libro(id_libro, archivo_pdf):
-    plan_filesystem = None
     try:
         libro_actualizado, plan_filesystem = actualizar_libro_archivo_service(id_libro, archivo_pdf)
         db.session.commit()
         respuesta =  {'mensaje': 'Archivo y portada actualizados correctamente',
             'libro': libro_actualizado}
+        return respuesta 
     
     except Exception as e:
         db.session.rollback()
-        if plan_filesystem:
-            _limpiar_temporales_en_fallo(plan_filesystem)
-        raise e 
-
-    if plan_filesystem:
-        _ejecutar_plan_filesystem(plan_filesystem)
-    
-    return respuesta 
+        raise e     
 
 def eliminar_libro(id_libro):
     try:

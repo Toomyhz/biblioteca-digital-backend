@@ -1,7 +1,7 @@
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
-from app.extensions import db, migrate, login_manager, server_session, api_new, redis_client
+from app.extensions import db, migrate, login_manager, server_session, api_new, redis_client,cloud_storage
 from app.api.exceptions import NotFoundError, RegistroExistenteError
 
 def create_app(config_class=None, testing: bool = False):
@@ -22,6 +22,7 @@ def create_app(config_class=None, testing: bool = False):
     login_manager.init_app(app)
     api_new.init_app(app)
     redis_client.init_app(app)
+    cloud_storage.init_app(app)
 
     # Configuración Oracle
     tns = app.config.get("TNS_ADMIN")
@@ -59,7 +60,7 @@ def create_app(config_class=None, testing: bool = False):
     api_new.add_namespace(lector_ns, path="/api/lector")
     api_new.add_namespace(biblioteca_ns, path="/api/biblioteca")
 
-    app.register_blueprint(uploads_bp,url_prefix = "/static")
+    app.register_blueprint(uploads_bp,url_prefix = "/api/static")
 
     # CORS
     CORS(

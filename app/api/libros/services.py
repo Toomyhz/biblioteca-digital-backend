@@ -12,7 +12,7 @@ sea:
 {response, status}
 
 """
-
+from app.extensions import cloud_storage
 from app import db
 from app.config import Config
 from app.models.carreras import Carreras
@@ -25,6 +25,9 @@ import os
 from app.api.exceptions import NotFoundError, ServiceError
 import fitz
 import uuid
+import io
+import time
+import tempfile
 
 UPLOAD_FOLDER = Config.PDF_UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -101,6 +104,12 @@ def listar_libros_service(pagina, limite, busqueda):
 
 
 def agregar_libro_service(data, archivo_pdf):
+    print("\n⏱️ --- INICIO CRONÓMETRO (MODO TEMPFILE) ---")
+    inicio_total = time.time()
+
+    # 1. Base de Datos (Igual que antes)
+    t_db = time.time()
+    
     titulo = data.get("titulo")
     slug_inicial = generar_slug(titulo)
 
@@ -114,59 +123,91 @@ def agregar_libro_service(data, archivo_pdf):
         archivo_portada=None,
     )
     db.session.add(nuevo_libro)
-
-    # Agregar registro a la tabla de asociación libros_autores si se proporciona id_autor
+    
+    # ... (Tus relaciones de autores y carreras siguen igual) ...
     autores_ids = data.get("ids_autores",[])
     if autores_ids:
         nuevo_libro.autores = Autores.query.filter(Autores.id_autor.in_(autores_ids)).all()
-
-    # Agregar registro a la tabla de asociación libros_careras si se proporciona id_carrera
     carreras_ids = data.get("ids_carreras", [])
     if carreras_ids:
         nuevo_libro.carreras = Carreras.query.filter(Carreras.id_carrera.in_(carreras_ids)).all()
 
     db.session.flush()
-
-    # Cambiar Slug con id
     nuevo_libro.slug_titulo = generar_slug(titulo, str(nuevo_libro.id_libro))
-
     db.session.flush()
+    print(f"📝 [BD] Metadata guardada: {time.time() - t_db:.4f} seg")
 
+    # Rutas
     pdf_filename = f"{nuevo_libro.slug_titulo}.pdf"
-    portada_filename = f"{nuevo_libro.slug_titulo}_portada.png"
+    portada_filename = f"{nuevo_libro.slug_titulo}_portada.jpg" 
+    key_pdf = f"libros/{pdf_filename}"
+    key_portada = f"portadas/{portada_filename}"
     
-    pdf_folder = current_app.config['PDF_UPLOAD_FOLDER']
-    portada_folder = current_app.config['PORTADA_UPLOAD_FOLDER']
-    os.makedirs(pdf_folder, exist_ok=True) 
-    os.makedirs(portada_folder, exist_ok=True) 
-    
-    pdf_path = os.path.join(pdf_folder, pdf_filename)
-    portada_path = os.path.join(portada_folder, portada_filename)
+    # Variable para guardar la ruta temporal y borrarla luego
+    temp_pdf_path = None
 
-    # 3. Leer el PDF en memoria
     try:
+        # 2. Guardar PDF en DISCO TEMPORAL (La clave de la velocidad)
+        t_read = time.time()
         pdf_bytes = archivo_pdf.read()
-    except Exception as e:
-        raise ServiceError(f'No se pudo leer el archivo: {str(e)}', 400)
-
-    try:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        page = doc[0]
-        pix = page.get_pixmap(dpi=300)
-        pix.save(portada_path)
-        doc.close()
-        with open(pdf_path, 'wb') as f:
-            f.write(pdf_bytes)
-
-    except Exception as e:
-        # Si PyMuPDF falla (ej. PDF corrupto), limpia los archivos creados
-        if os.path.exists(portada_path):
-            os.remove(portada_path)
-        raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
         
-    nuevo_libro.archivo_pdf = pdf_filename
-    nuevo_libro.archivo_portada = portada_filename
+        # Creamos un archivo físico temporal
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(pdf_bytes)
+            temp_pdf_path = tmp.name # Guardamos la ruta ej: C:\Tmp\asd.pdf
+            
+        tamano_mb = len(pdf_bytes) / (1024 * 1024)
+        print(f"💾 [DISCO] PDF guardado temporalmente ({tamano_mb:.2f} MB): {time.time() - t_read:.4f} seg")
 
+        # 3. Procesar Portada (Desde el archivo en disco es más eficiente para fitz)
+        t_cpu = time.time()
+        doc = fitz.open(temp_pdf_path) 
+        page = doc[0]
+        matriz = fitz.Matrix(0.3,0.3)
+        pix = page.get_pixmap(matrix=matriz,alpha=False)
+        portada_bytes = pix.tobytes("jpg")
+        doc.close()
+        print(f"⚙️ [CPU] Portada generada: {time.time() - t_cpu:.4f} seg")
+
+        # 4. Subida PDF (USANDO LA RUTA DEL DISCO)
+        t_up_pdf = time.time()
+        print(f"🚀 [RED] Subiendo PDF en PARALELO desde disco...")
+        
+        # AQUI ESTÁ EL TRUCO: Pasamos el PATH (string), no el BytesIO
+        cloud_storage.upload_file(
+            temp_pdf_path,  # <--- Pasamos la ruta string
+            key_pdf,
+            content_type='application/pdf',
+            acl='private'
+        )
+        
+        duracion_pdf = time.time() - t_up_pdf
+        velocidad = tamano_mb / duracion_pdf if duracion_pdf > 0 else 0
+        print(f"✅ [RED] PDF subido en: {duracion_pdf:.2f} seg (Velocidad: {velocidad:.2f} MB/s)")
+        
+        # 5. Subida Portada (Sigue igual en RAM porque es pequeña)
+        t_up_img = time.time()
+        cloud_storage.upload_file(
+            io.BytesIO(portada_bytes), 
+            key_portada, 
+            content_type='image/jpg',
+            acl='public-read'
+        )
+        print(f"✅ [RED] Portada subida en: {time.time() - t_up_img:.4f} seg")
+
+    except Exception as e:
+        raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
+    
+    finally:
+        # LIMPIEZA: Borramos el archivo temporal siempre, pase lo que pase
+        if temp_pdf_path and os.path.exists(temp_pdf_path):
+            os.remove(temp_pdf_path)
+            # print("🧹 Archivo temporal eliminado")
+
+    nuevo_libro.archivo_pdf = key_pdf
+    nuevo_libro.archivo_portada = key_portada
+
+    print(f"🏁 --- TIEMPO TOTAL: {time.time() - inicio_total:.2f} seg ---\n")
     return nuevo_libro
 
 
@@ -186,36 +227,14 @@ def actualizar_libro_metadata_service(id_libro, data):
     libro = Libros.query.get(id_libro)
     if not libro:
         raise NotFoundError(f"Libro con ID {id_libro} no encontrado")
-
-    pdf_folder = current_app.config["PDF_UPLOAD_FOLDER"]
-    portada_folder = current_app.config["PORTADA_UPLOAD_FOLDER"]
-
-    plan_filesystem = None
     
     if "titulo" in data and data["titulo"] != libro.titulo:
         nuevo_titulo = data["titulo"]
         nuevo_slug = generar_slug(nuevo_titulo,str(id_libro))
 
-        path_pdf_antiguo = os.path.join(pdf_folder, libro.archivo_pdf) if libro.archivo_pdf else None
-        path_portada_antigua = os.path.join(portada_folder, libro.archivo_portada) if libro.archivo_portada else None
-
-        nuevo_pdf_filename = f"{nuevo_slug}.pdf"
-        nueva_portada_filename = f"{nuevo_slug}_cover.png"
-
-        path_pdf_nuevo = os.path.join(pdf_folder, nuevo_pdf_filename)
-        path_portada_nueva = os.path.join(portada_folder, nueva_portada_filename)
-        
-        plan_filesystem = {
-            "archivos_a_renombrar":[
-                (path_pdf_antiguo,path_pdf_nuevo),(path_portada_antigua,path_portada_nueva)
-            ]
-        }
-
         # 2. Actualizar el modelo con los NUEVOS nombres
         libro.titulo = nuevo_titulo
         libro.slug_titulo = nuevo_slug
-        libro.archivo_pdf = nuevo_pdf_filename
-        libro.archivo_portada = nueva_portada_filename
 
     if 'isbn' in data:
         libro.isbn = data['isbn']
@@ -229,7 +248,7 @@ def actualizar_libro_metadata_service(id_libro, data):
     if 'ids_carreras' in data:
         libro.carreras = Carreras.query.filter(Carreras.id_carrera.in_(data["ids_carreras"])).all()
 
-    return libro, plan_filesystem
+    return libro
       
     
 def actualizar_libro_archivo_service(id_libro, archivo_pdf):    
@@ -237,54 +256,58 @@ def actualizar_libro_archivo_service(id_libro, archivo_pdf):
     if not libro:
         raise NotFoundError(f'Libro con ID {id_libro} no encontrado.')
 
-    pdf_folder = current_app.config['PDF_UPLOAD_FOLDER']
-    portada_folder = current_app.config['PORTADA_UPLOAD_FOLDER']
-    
+    path_pdf_viejo = libro.archivo_pdf
+    path_portada_vieja = libro.archivo_portada
 
-    slug_base = libro.slug_titulo
-    pdf_filename_final = f"{slug_base}.pdf"
-    portada_filename_final = f"{slug_base}_cover.png"
+    key_pdf = f"libros/{libro.slug_titulo}.pdf"
+    key_portada = f"portadas/{libro.slug_titulo}_portada.jpg"
 
-    path_pdf_antiguo = os.path.join(pdf_folder, libro.archivo_pdf) if libro.archivo_pdf else None
-    path_portada_antigua = os.path.join(portada_folder, libro.archivo_portada) if libro.archivo_portada else None
-
-    random_suffix = uuid.uuid4().hex[:8] # String aleatorio
-    pdf_filename_temp = f"{slug_base}_{random_suffix}.tmp.pdf"
-    portada_filename_temp = f"{slug_base}_{random_suffix}.tmp.png"
-
-    path_pdf_temp = os.path.join(pdf_folder, pdf_filename_temp)
-    path_portada_temp = os.path.join(portada_folder, portada_filename_temp)
+    temp_pdf_path = None
 
     try:
         pdf_bytes = archivo_pdf.read()
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(pdf_bytes)
+            temp_pdf_path = tmp.name # Ruta física
+
+        doc = fitz.open(temp_pdf_path)
         page = doc[0]
-        pix = page.get_pixmap(dpi=150)
-        pix.save(path_portada_temp)
+        matriz = fitz.Matrix(0.3, 0.3) 
+        pix = page.get_pixmap(matrix=matriz, alpha=False)
+        portada_bytes = pix.tobytes("jpg")
         doc.close()
-        
-        with open(path_pdf_temp, 'wb') as f:
-            f.write(pdf_bytes)
-            
+        cloud_storage.upload_file(
+            temp_pdf_path, 
+            key_pdf,
+            content_type='application/pdf',
+            acl='private'
+        )
+
+        cloud_storage.upload_file(
+            io.BytesIO(portada_bytes), 
+            key_portada, 
+            content_type='image/jpeg', # Importante: image/jpeg
+            acl='public-read'
+        )
+           
     except Exception as e:
-            # Si la escritura del NUEVO archivo falla, limpiamos los .tmp
-            if os.path.exists(path_portada_temp): os.remove(path_portada_temp)
-            if os.path.exists(path_pdf_temp): os.remove(path_pdf_temp)
-            raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
+        raise ServiceError(f'Error al procesar el PDF: {str(e)}', 400)
 
-    libro.archivo_pdf = pdf_filename_final
-    libro.archivo_portada = portada_filename_final
-
-    plan_filesystem = {
-        "antiguos_a_borrar": [p for p in [path_pdf_antiguo, path_portada_antigua] if p],
-        "temporales_a_renombrar": [
-            (path_pdf_temp, os.path.join(pdf_folder, pdf_filename_final)),
-            (path_portada_temp, os.path.join(portada_folder, portada_filename_final))
-        ],
-        "temporales_a_borrar_en_fallo": [path_pdf_temp, path_portada_temp]
-    }
+    finally:
+        if temp_pdf_path and os.path.exists(temp_pdf_path):
+            os.remove(temp_pdf_path)
     
-    return libro, plan_filesystem
+    if path_pdf_viejo and path_pdf_viejo != key_pdf:
+        print(f"🗑️ Eliminando huérfano: {path_pdf_viejo}")
+        cloud_storage.delete_file(path_pdf_viejo)
+
+    if path_portada_vieja and path_portada_vieja != key_portada:
+        print(f"🗑️ Eliminando huérfano: {path_portada_vieja}")
+        cloud_storage.delete_file(path_portada_vieja)
+
+    libro.archivo_pdf = key_pdf
+    libro.archivo_portada = key_portada
+    return libro
 
 
 def eliminar_libro_service(id_libro):
@@ -292,20 +315,13 @@ def eliminar_libro_service(id_libro):
     if not libro:
         raise NotFoundError(f"Libro con ID {id_libro} no encontrado")
 
-    pdf_folder = current_app.config["PDF_UPLOAD_FOLDER"]
-    portada_folder = current_app.config["PORTADA_UPLOAD_FOLDER"]
 
     # Eliminar archivo PDF asociado si existe
     if libro.archivo_pdf:
-        pdf_path = os.path.join(pdf_folder, libro.archivo_pdf)
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
-
+        cloud_storage.delete_file(libro.archivo_pdf)
 
     if libro.archivo_portada:
-        pdf_path = os.path.join(portada_folder, libro.archivo_portada)
-        if os.path.exists(pdf_path):
-            os.remove(pdf_path)
+        cloud_storage.delete_file(libro.archivo_portada)
 
     db.session.delete(libro)
     return libro

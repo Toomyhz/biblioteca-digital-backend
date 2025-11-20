@@ -4,6 +4,7 @@ from flask_login import LoginManager
 from flask_session import Session
 from flask_restx import Api
 from flask_redis import FlaskRedis
+from .utils import DigitalOceanSpaces
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -13,7 +14,8 @@ api_new = Api(
     version="1.0",
     title="Biblioteca Digital - API",
     description="Api para gestión y administración de la Biblioteca Digital",
-    doc="/docs"
+    doc="/api/docs"
 )
 
 redis_client = FlaskRedis()
+cloud_storage = DigitalOceanSpaces()
