@@ -42,41 +42,21 @@ def leer_carreras_service():
 
 
 def actualizar_carrera_service(id_carrera, data):
-    nombre_carrera = data.get("edit_nombre")
-    if not nombre_carrera:
-        raise ValidationError("El nombre de la carrera es obligatorio")
+    carrera = Carreras.query.get(id_carrera)
+    if not carrera:
+        raise NotFoundError("Carrera no encontrada")
 
-    try:
-        carrera = Carreras.query.get(id_carrera)
-        if not carrera:
-            raise NotFoundError("Carrera no encontrada")
+    carrera.nombre_carrera = data.get("edit_nombre")
+    carrera.slug_carrera = generar_slug(carrera.nombre_carrera, str(id_carrera))
 
-        carrera.nombre_carrera = nombre_carrera
-        carrera.slug_carrera = generar_slug(nombre_carrera, str(id_carrera))
+    return carrera
 
-        db.session.commit()
-        return carrera.to_dict_basic()
-
-    except ServiceError:
-        raise
-    except Exception as e:
-        db.session.rollback()
-        raise ServiceError(f"Error al actualizar carrera: {e}")
 
 
 def eliminar_carrera_service(id_carrera):
-    try:
-        carrera = Carreras.query.get(id_carrera)
-        if not carrera:
-            raise NotFoundError("Carrera no encontrada")
+    carrera = Carreras.query.get(id_carrera)
+    if not carrera:
+        raise NotFoundError("Carrera no encontrada")
 
-        db.session.delete(carrera)
-        db.session.commit()
-
-        return carrera.to_dict()
-
-    except ServiceError:
-        raise
-    except Exception as e:
-        db.session.rollback()
-        raise ServiceError(f"Error al eliminar carrera: {e}")
+    db.session.delete(carrera)
+    return None

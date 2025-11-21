@@ -9,6 +9,7 @@ from app.api.carreras.services import (
     eliminar_carrera_service,
     leer_carreras_service,
 )
+from app.extensions import db
 
 
 def safe_controller(func):
@@ -55,42 +56,44 @@ def agregar_carrera():
     if len(nombre) > 255:
         raise ValidationError("El nombre no puede exceder 255 caracteres")
 
-    response, status = agregar_carrera_service(data)
-    if status == 409:
-        raise ConflictError(f"Ya existe una carrera con ese nombre: {nombre}")
-
-    return response, status
+    response = agregar_carrera_service(data)
+    return response
 
 
 @safe_controller
-def actualizar_carrera(id_carrera):
+def actualizar_carrera(id_carrera,data):
     """Actualizar carrera existente."""
-    id_int = validar_id_carrera(id_carrera)
-    data = request.get_json() or request.form
-    nombre = data.get('edit_nombre_carrera', '').strip()
-
-    if nombre:
-        if len(nombre) < 3:
-            raise ValidationError("El nombre debe tener al menos 3 caracteres")
-        if len(nombre) > 255:
-            raise ValidationError("El nombre no puede exceder 255 caracteres")
-
-    response, status = actualizar_carrera_service(id_int, data)
-    if status == 404:
-        raise NotFoundError(f"Carrera con ID {id_int} no encontrada")
-    if status == 409:
-        raise ConflictError("Ya existe una carrera con ese nombre")
-    return response, status
+    try:
+        carrera = actualizar_carrera_service(id_carrera, data)
+        db.session.commit()
+        return {"mensaje":"Carrera actualizada correctamente","carrera":carrera}, 200
+    
+    except NotFoundError as e:
+        db.session.rollback()
+        raise e
+    except IntegrityError:
+        db.session.rollback()
+        raise ConflictError("La carrera actualizada entra en conflicto con otra existente.")
+    except Exception as e:
+        db.session.rollback()
+        raise e
 
 
-@safe_controller
+
+
 def eliminar_carrera(id_carrera):
     """Eliminar carrera."""
     id_int = validar_id_carrera(id_carrera)
-    response, status = eliminar_carrera_service(id_int)
-    if status == 404:
-        raise NotFoundError(f"Carrera con ID {id_int} no encontrada")
-    if "foreign key" in str(response).lower():
-        raise IntegrityError(
-            "No se puede eliminar la carrera porque tiene libros asociados")
-    return response, status
+    try:
+        eliminar_carrera_service(id_int)
+        db.session.commit()
+        return {"mensaje":"Carrera eliminada correctamente"}, 200
+    except NotFoundError as e:
+        db.session.rollback()
+        raise e
+    except IntegrityError:
+        db.session.rollback()
+        raise ConflictError("No se puede eliminar esta carrera: está asociada a uno o más libros")
+    except Exception as e:
+        db.session.rollback()
+        raise e

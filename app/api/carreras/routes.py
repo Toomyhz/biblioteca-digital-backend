@@ -37,7 +37,8 @@ class Carrera(Resource):
     @carreras_sn.marshal_with(models['response'], code=200)
     def put(self, id_carrera):
         """Actualizar carrera existente"""
-        return actualizar_carrera(id_carrera)
+        data = carreras_sn.payload
+        return actualizar_carrera(id_carrera,data)
 
     @carreras_sn.marshal_with(models['response'], code=200)
     def delete(self, id_carrera):

@@ -37,7 +37,6 @@ def actualizar_autor(id_autor,data):
     except NotFoundError as e:
         db.session.rollback()
         raise e
-    
     except IntegrityError:
         db.session.rollback()
         raise RegistroExistenteError("El autor actualizado entra en conflicto con otro existente.")
