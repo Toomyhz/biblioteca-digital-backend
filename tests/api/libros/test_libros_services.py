@@ -1,250 +1,133 @@
 import pytest
 from unittest.mock import patch, MagicMock, mock_open
 from werkzeug.datastructures import ImmutableMultiDict
-
-# archivos_permitidos()
+from app.api.libros.services import archivos_permitidos, agregar_libro_service, listar_libros_service, eliminar_libro_service
+from app.api.exceptions import NotFoundError, ServiceError
+from app.models.libros import Libros
 
 
 class TestArchivosPermitidos:
 
     def test_acepta_pdf_minusculas(self):
         """Acepta archivos .pdf en minúsculas"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("documento.pdf") == True
 
     def test_acepta_pdf_mayusculas(self):
         """Acepta archivos .PDF en mayúsculas"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("DOCUMENTO.PDF") == True
 
     def test_acepta_pdf_mixto(self):
         """Acepta archivos .PdF en mixto"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("documento.PdF") == True
 
     def test_rechaza_txt(self):
         """Rechaza archivos .txt"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("documento.txt") == False
 
     def test_rechaza_jpg(self):
         """Rechaza archivos .jpg"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("imagen.jpg") == False
 
     def test_rechaza_exe(self):
         """Rechaza archivos .exe"""
-        from app.api.libros.services import archivos_permitidos
+        assert archivos_permitidos("virus.exe") == False
         assert archivos_permitidos("virus.exe") == False
 
     def test_rechaza_sin_extension(self):
         """Rechaza archivos sin extensión"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("documento") == False
 
     def test_rechaza_vacio(self):
         """Rechaza string vacío"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("") == False
 
     def test_multiples_puntos(self):
         """Maneja archivos con múltiples puntos"""
-        from app.api.libros.services import archivos_permitidos
         assert archivos_permitidos("mi.libro.final.pdf") == True
         assert archivos_permitidos("mi.libro.final.txt") == False
 
-# listar_libros_service()
-
-
 class TestListarLibrosService():
-    def test_listar_sin_resultados(self, test_app):
-        """Lista vacía cuando no hay libros (HÍBRIDO)"""
-        from app.api.libros.services import listar_libros_service
-
-        # Mock paginación vacía
-        mock_paginacion = MagicMock()
-        mock_paginacion.items = []
-        mock_paginacion.page = 1
-        mock_paginacion.per_page = 10
-        mock_paginacion.total = 0
-        mock_paginacion.pages = 0
-
-        mock_query = MagicMock()
-        mock_query.order_by.return_value.paginate.return_value = mock_paginacion
-
-        with patch('app.api.libros.services.Libros') as mock_libros:
-            mock_libros.query = mock_query
-
-            # Contexto de Flask con request real
-            with test_app.test_request_context('/?pagina=1&limite=10&busqueda='):
-                response, status = listar_libros_service()
-
-                assert status == 200
-                assert response["data"] == []
-                assert response["paginacion"]["total"] == 0
-
-    def test_listar_con_resultados(self, test_app):
-        """Retorna libros correctamente paginados"""
-        from app.api.libros.services import listar_libros_service
-
-        libro1 = MagicMock()
-        libro1.to_dict.return_value = {"id_libro": 1, "titulo": "Libro 1"}
-        libro2 = MagicMock()
-        libro2.to_dict.return_value = {"id_libro": 2, "titulo": "Libro 2"}
-
-        mock_paginacion = MagicMock()
-        mock_paginacion.items = [libro1, libro2]
-        mock_paginacion.page = 1
-        mock_paginacion.per_page = 10
-        mock_paginacion.total = 2
-        mock_paginacion.pages = 1
-
-        mock_query = MagicMock()
-        mock_query.order_by.return_value.paginate.return_value = mock_paginacion
-
-        with patch('app.api.libros.services.Libros') as mock_libros:
-            mock_libros.query = mock_query
-
-            with test_app.test_request_context('/?pagina=1&limite=10&busqueda='):
-                response, status = listar_libros_service()
-
-            assert status == 200
-            assert len(response["data"]) == 2
-            assert response["data"][0]["titulo"] == "Libro 1"
-            assert response["paginacion"]["total"] == 2
-
-    def test_listar_con_paginacion(self, test_app):
-        """Respeta parámetros de paginación"""
-        from app.api.libros.services import listar_libros_service
-
-        mock_paginacion = MagicMock()
-        mock_paginacion.items = []
-        mock_paginacion.page = 2
-        mock_paginacion.per_page = 5
-        mock_paginacion.total = 12
-        mock_paginacion.pages = 3
-
-        mock_query = MagicMock()
-        mock_query.order_by.return_value.paginate.return_value = mock_paginacion
-        with patch('app.api.libros.services.Libros') as mock_libros:
-            mock_libros.query = mock_query
-
-            with test_app.test_request_context('/?pagina=2&limite=5&busqueda='):
-                response, status = listar_libros_service()
-
-                assert status == 200
-                assert response["paginacion"]["pagina"] == 2
-                assert response["paginacion"]["limite"] == 5
-                assert response["paginacion"]["total"] == 12
-                assert response["paginacion"]["total_paginas"] == 3
-
-    def test_listar_sin_busqueda(self, test_app):
-        """Lista libros sin parámetro de búsqueda sin ejecutar SQL real"""
-        from app.api.libros.services import listar_libros_service
-
-        # Mock de libros con método to_dict()
-        mock_libro1 = MagicMock()
-        mock_libro1.to_dict.return_value = {"id_libro": 1, "titulo": "Libro 1"}
-        mock_libro2 = MagicMock()
-        mock_libro2.to_dict.return_value = {"id_libro": 2, "titulo": "Libro 2"}
-
-        # Mock paginación completa
-        mock_paginate = MagicMock(
-            items=[mock_libro1, mock_libro2],
+    def test_listar_libros_vacio(self,mocker):
+        fake_paginacion = mocker.Mock(
+            items=[],
             page=1,
             per_page=10,
-            total=2,
-            pages=1
+            total=0,
+            pages=0,
         )
 
-        # Mock chain: query -> order_by -> paginate
-        mock_order = MagicMock()
-        mock_order.paginate.return_value = mock_paginate
+        fake_query = mocker.Mock()
+        fake_query.order_by.return_value.paginate.return_value = fake_paginacion
 
-        mock_query = MagicMock()
-        mock_query.order_by.return_value = mock_order
-        with patch('app.api.libros.services.Libros') as mock_libros:
-            mock_libros.query = mock_query
+        mocker.patch(
+            "app.api.libros.services.db.session.query",
+            return_value=fake_query,
+        )
 
-            with test_app.test_request_context('/?pagina=1&limite=10'):
-                response, status = listar_libros_service()
+        result = listar_libros_service(1, 10, None)
 
-            # print("=== test_listar_sin_busqueda ===")
-            # print("Status:", status)
-            # print("Response:", response)
-            # print("mock_query.filter called:",
-            #       mock_query.filter.called)
-            # print("mock_order.paginate called:", mock_order.paginate.called)
-            # print("mock_paginate.items:", mock_paginate.items)
-            # print("=== FIN ===\n")
-
-            assert status == 200
-            assert response["paginacion"]["total"] == 2
-            assert len(response["data"]) == 2
-            assert response["data"][0]["titulo"] == "Libro 1"
-
-    def test_listar_con_busqueda(self, test_app):
-        """Aplica filtro de búsqueda sin ejecutar SQL real"""
-        from app.api.libros.services import listar_libros_service
-
-        # Simulamos que 'or_' devuelve algo válido sin usar SQLAlchemy
-        with patch('app.api.libros.services.or_') as mock_or:
-            mock_or.return_value = "filtro_mock"
-
-            # Mock paginación completa
-            mock_paginate = MagicMock(
-                items=[],
-                page=1,
-                per_page=10,
-                total=0,
-                pages=0
-            )
-
-            # Mock chain: query -> filter -> order_by -> paginate
-            mock_order = MagicMock()
-            mock_order.paginate.return_value = mock_paginate
-
-            mock_filter = MagicMock()
-            mock_filter.order_by.return_value = mock_order
-
-            mock_query = MagicMock()
-            mock_query.filter.return_value = mock_filter
-            with patch('app.api.libros.services.Libros') as mock_libros:
-                mock_libros.query = mock_query
-
-                with test_app.test_request_context('/?pagina=1&limite=10&busqueda=Aleph'):
-                    response, status = listar_libros_service()
-
-                # Verificaciones
-                assert status == 200
-                mock_query.filter.assert_called_once_with("filtro_mock")
-                mock_or.assert_called_once()  # se usó el filtro OR
-                assert response["paginacion"]["total"] == 0
-
-    def test_listar_error_database(self, test_app):
-        """Maneja errores de base de datos"""
-        from app.api.libros.services import listar_libros_service
-
-        # Mock error en execute
-        with patch('app.api.libros.services.db') as mock_db:
-            mock_db.session.execute.side_effect = Exception("Connection error")
-
-            with test_app.test_request_context('/?pagina=1&limite=10&busqueda='):
-                response, status = listar_libros_service()
-
-                assert status == 500
-                assert "error" in response
-                mock_db.session.rollback.assert_called_once()
-
-# agregar_libro_service()
+        assert result["data"] == []
+        assert result["paginacion"]["total"] == 0
 
 
+    def test_listar_libros_con_resultados(self,mocker):
+        # Libros simulados
+        libro = mocker.Mock()
+        libro.to_dict.return_value = {"id_libro": 1}
+
+        fake_paginacion = mocker.Mock(
+            items=[libro],
+            page=1,
+            per_page=10,
+            total=1,
+            pages=1,
+        )
+
+        fake_query = mocker.Mock()
+        fake_query.order_by.return_value.paginate.return_value = fake_paginacion
+
+        mocker.patch(
+            "app.api.libros.services.db.session.query",
+            return_value=fake_query,
+        )
+
+        result = listar_libros_service(1, 10, None)
+
+        assert result["data"] == [{"id_libro": 1}]
+        assert result["paginacion"]["total"] == 1
+
+   
+def test_listar_libros_con_busqueda_aplica_filtro(mocker):
+
+    fake_paginacion = mocker.Mock(
+        items=[],
+        page=1,
+        per_page=10,
+        total=0,
+        pages=0,
+    )
+
+    fake_filtered = mocker.Mock()
+    fake_filtered.order_by.return_value.paginate.return_value = fake_paginacion
+
+    fake_query = mocker.Mock()
+    fake_query.filter.return_value = fake_filtered
+
+    mocker.patch(
+        "app.api.libros.services.db.session.query",
+        return_value=fake_query,
+    )
+
+    listar_libros_service(1, 10, "Hola")
+
+    fake_query.filter.assert_called_once()
+
+   
 class TestAgregarLibroService:
     """Tests para agregar_libro_service"""
 
     def test_sin_titulo_retorna_error(self, test_app):
         """Rechaza libro sin título"""
-        from app.api.libros.services import agregar_libro_service
 
         with test_app.app_context():
             data = ImmutableMultiDict([("new_isbn", "123456")])
@@ -258,7 +141,6 @@ class TestAgregarLibroService:
 
     def test_archivo_invalido_retorna_error(self, test_app):
         """Rechaza archivos que no son PDF"""
-        from app.api.libros.services import agregar_libro_service
 
         with test_app.app_context():
             data = ImmutableMultiDict([
@@ -278,9 +160,7 @@ class TestAgregarLibroService:
 
     def test_agregar_libro_exitoso(self, test_app):
         """Agrega libro correctamente"""
-        from unittest.mock import patch, MagicMock
-        from werkzeug.datastructures import ImmutableMultiDict
-        from app.api.libros.services import agregar_libro_service
+
 
         with (
             patch('app.api.libros.services.UPLOAD_FOLDER', '/tmp'),
@@ -343,7 +223,6 @@ class TestAgregarLibroService:
 
     def test_agregar_libro_variantes(self, test_app):
         """Prueba todas las variantes del flujo de agregar_libro_service pa llegar a 100%"""
-        from app.api.libros.services import agregar_libro_service
 
         with test_app.app_context():
             with (
@@ -355,21 +234,6 @@ class TestAgregarLibroService:
             ):
                 mock_session = MagicMock()
                 mock_db.session = mock_session
-
-                def crear_mock_libro():
-                    """Crea un mock de libro limpio"""
-                    mock_generar_slug.side_effect = [
-                        "test-libro", "test-libro-1"]
-                    mock_libro = MagicMock()
-                    mock_libro.id_libro = 1
-                    mock_libro.autores = []
-                    mock_libro.carreras = []
-                    mock_libro.to_dict.return_value = {
-                        "id_libro": 1,
-                        "titulo": "Test Libro"
-                    }
-                    mock_libros_class.return_value = mock_libro
-                    return mock_libro
 
                 mock_pdf = MagicMock()
                 mock_pdf.filename = "test.pdf"
@@ -540,7 +404,6 @@ class TestAgregarLibroService:
 
     def test_agregar_libro_fallido(self, test_app):
         """Errores"""
-        from app.api.libros.services import agregar_libro_service
 
         with test_app.app_context():
             with patch('app.api.libros.services.db') as mock_db:
@@ -567,7 +430,6 @@ class TestActualizarLibroService:
 
     def test_libro_no_encontrado(self, test_app):
         """Retorna 401(no recibió datos validos para el recurso solicitado) si libro no existe"""
-        from app.api.libros.services import actualizar_libro_service
 
         with test_app.app_context():
             with patch('app.api.libros.services.Libros') as mock_libros:
@@ -583,7 +445,6 @@ class TestActualizarLibroService:
 
     def test_actualizar_titulo(self, test_app):
         """Actualiza el título del libro"""
-        from app.api.libros.services import actualizar_libro_service
 
         with test_app.app_context():
             with patch('app.api.libros.services.db') as mock_db, \
@@ -621,12 +482,9 @@ class TestActualizarLibroService:
                 assert mock_libro.titulo == "Nuevo Título"
                 mock_session.commit.assert_called_once()
 
-    def test_pdf_existente_y_eliminar_pdf_antiguo(self, test_app):
-        pass
 
     def test_actualizar_error_database(self, test_app):
         """Maneja errores de base de datos"""
-        from app.api.libros.services import actualizar_libro_service
 
         with test_app.app_context():
             with patch('app.api.libros.services.db') as mock_db:
@@ -652,19 +510,13 @@ class TestActualizarLibroService:
 class TestEliminarLibroService:
     """Test para eliminar_libro_service"""
 
-    def test_eliminar_libro_no_encontrado(self, test_app):
+    def test_eliminar_libro_no_encontrado(self,mocker):
         """Devuelve error cuando el libro no es encontrado"""
-        from app.api.libros.services import eliminar_libro_service
+        mock_get = mocker.patch("app.api.libros.services.db.session.get",return_value=None)
 
-        with patch('app.api.libros.services.Libros') as mock_libros:
-            mock_libros.query.get.return_value = None  # No hay libro, no se encontró
+        with pytest.raises(NotFoundError) as exc_info:
+            eliminar_libro_service(990)
+        
+        assert str(exc_info.value) == "Libro con ID 990 no encontrado"
+        mock_get.assert_called_once_with(Libros,990)
 
-            response, status = eliminar_libro_service(990)  # HNo hay id
-
-            assert status == 404
-            assert response == {'error': 'Libro no encontrado'}
-
-            # no debe hacer commit ni borrar de la bd
-            with patch('app.api.libros.services.db') as mock_db:
-                mock_db.session.delete.assert_not_called()
-                mock_db.session.commit.assert_not_called()

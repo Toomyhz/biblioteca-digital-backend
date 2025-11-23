@@ -184,7 +184,7 @@ def test_manejar_callback_con_email_no_verificado(mocker):
         'email': 'test@umce.cl',
         'name': 'Test User',
         'nonce': 'test_nonce',
-        'email_verified': False  # <-- Error forzado
+        'email_verified': False 
     }
 
     mocker.patch('app.api.auth.controllers._verify_id_token', return_value=claims_no_verificados)
@@ -196,7 +196,7 @@ def test_manejar_callback_con_email_no_verificado(mocker):
 
     response = manejar_callback(MockRequest())
 
-    mock_oauth_helper.assert_called_once_with('email_unverified or invalid_domain')
+    mock_oauth_helper.assert_called_once_with('email_unverified_or_invalid_domain')
     assert response.status_code == 302
     assert 'auth_error=email_unverified_or_invalid_domain' in response.location
 
@@ -232,7 +232,7 @@ def test_manejar_callback_con_dominio_invalido(mocker):
     mock_require_domain.assert_called_once_with("test@dominio-incorrecto.com")
 
     # Se llamo al helperde error con el código correcto
-    mock_oauth_helper.assert_called_once_with('email_unverified or invalid_domain')
+    mock_oauth_helper.assert_called_once_with('email_unverified_or_invalid_domain')
     assert response.status_code == 302
     assert 'auth_error=email_unverified_or_invalid_domain' in response.location
 

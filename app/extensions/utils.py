@@ -1,6 +1,6 @@
 import boto3
 from botocore.config import Config
-from boto3.s3.transfer import TransferConfig # <--- IMPORTANTE: Importar esto
+from boto3.s3.transfer import TransferConfig 
 
 class DigitalOceanSpaces:
     def __init__(self, app=None):
@@ -10,7 +10,7 @@ class DigitalOceanSpaces:
             self.init_app(app)
 
     def init_app(self, app):
-        # Cargamos config desde app.config
+
         self.bucket_name = app.config.get('DO_SPACES_BUCKET')
         
         self.client = boto3.client(
@@ -19,13 +19,13 @@ class DigitalOceanSpaces:
             endpoint_url=app.config.get('DO_SPACES_ENDPOINT'),
             aws_access_key_id=app.config.get('DO_SPACES_KEY'),
             aws_secret_access_key=app.config.get('DO_SPACES_SECRET'),
-            # Configuración de conexión (Timeouts y Firma)
+
             config=Config(signature_version='s3v4', connect_timeout=5, read_timeout=5)
         )
 
     def upload_file(self, file_or_path, destination_path, content_type=None, acl='private'):
         try:
-            # Configuración Turbo: Umbral bajo (1MB) y muchos hilos (10)
+
             MB = 1024 ** 2
             transfer_config = TransferConfig(
                 multipart_threshold=1 * MB,
@@ -38,9 +38,9 @@ class DigitalOceanSpaces:
             if content_type:
                 extra_args['ContentType'] = content_type
             
-            # Lógica Inteligente: ¿Es ruta o es memoria?
+
             if isinstance(file_or_path, str):
-                # ES DISCO: Boto3 optimiza esto al máximo con hilos
+
                 self.client.upload_file(
                     Filename=file_or_path,
                     Bucket=self.bucket_name,
@@ -49,7 +49,7 @@ class DigitalOceanSpaces:
                     Config=transfer_config
                 )
             else:
-                # ES MEMORIA: Método tradicional
+  
                 if hasattr(file_or_path, 'seek'):
                     file_or_path.seek(0)
 
@@ -71,7 +71,7 @@ class DigitalOceanSpaces:
         expiration: Tiempo en segundos (300s = 5 minutos).
         """
         try:
-            # Generamos la URL firmada
+
             url = self.client.generate_presigned_url(
                 'get_object',
                 Params={

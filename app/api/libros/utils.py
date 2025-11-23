@@ -1,35 +1,60 @@
+# app/utils/pdf_utils.py
+import io
 import os
-def _ejecutar_plan_filesystem(plan):
-    """
-    Helper para ejecutar el plan de archivos DESPUÉS del commit.
-    Primero borra los antiguos, luego renombra los nuevos.
-    """
-    # 1. Borrar antiguos
-    for path_archivo in plan["antiguos_a_borrar"]:
-        if os.path.exists(path_archivo):
-            try:
-                os.remove(path_archivo)
-            except Exception as e:
-                # ALERTA: La BBDD está actualizada, pero el archivo antiguo 
-                # no se pudo borrar. Registrar esto.
-                print(f"ALERTA POST-COMMIT: No se pudo borrar el archivo antiguo {path_archivo}: {e}")
-                
-    # 2. Renombrar nuevos (el "commit" del sistema de archivos)
-    for path_temp, path_final in plan["temporales_a_renombrar"]:
-        try:
-            os.rename(path_temp, path_final)
-        except Exception as e:
-            # ERROR CRÍTICO: La BBDD apunta al nuevo archivo,
-            # pero no pudimos renombrarlo.
-            print(f"ERROR CRÍTICO POST-COMMIT: No se pudo renombrar {path_temp} a {path_final}: {e}")
+import tempfile
+import fitz  # PyMuPDF
 
-def _limpiar_temporales_en_fallo(plan):
+from app.extensions import cloud_storage
+from app.api.exceptions import ServiceError  
+
+def procesar_pdf_y_subir(archivo_pdf, slug_titulo: str) -> tuple[str, str]:
     """
-    Helper para borrar los archivos .tmp si el commit de la BBDD falla.
+    Lee un archivo PDF (file-like), genera portada y sube ambos a cloud_storage.
+    Devuelve (key_pdf, key_portada).
+
+    Lanza ServiceError(…, 400) si algo falla al procesar.
     """
-    for path_temp in plan["temporales_a_borrar_en_fallo"]:
-        if os.path.exists(path_temp):
-            try:
-                os.remove(path_temp)
-            except Exception as e:
-                 print(f"ALERTA ROLLBACK: No se pudo limpiar el temporal {path_temp}: {e}")
+    key_pdf = f"libros/{slug_titulo}.pdf"
+    key_portada = f"portadas/{slug_titulo}_portada.jpg"
+
+    temp_pdf_path = None
+
+    try:
+        pdf_bytes = archivo_pdf.read()
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(pdf_bytes)
+            temp_pdf_path = tmp.name
+
+        # Procesar portada
+        doc = fitz.open(temp_pdf_path)
+        page = doc[0]
+        matriz = fitz.Matrix(0.3, 0.3)
+        pix = page.get_pixmap(matrix=matriz, alpha=False)
+        portada_bytes = pix.tobytes("jpg")
+        doc.close()
+
+        # Subir PDF
+        cloud_storage.upload_file(
+            temp_pdf_path,
+            key_pdf,
+            content_type="application/pdf",
+            acl="private",
+        )
+
+        # Subir portada
+        cloud_storage.upload_file(
+            io.BytesIO(portada_bytes),
+            key_portada,
+            content_type="image/jpeg",
+            acl="public-read",
+        )
+
+        return key_pdf, key_portada
+
+    except Exception as e:
+        raise ServiceError(f"Error al procesar el PDF: {str(e)}", 400)
+
+    finally:
+        if temp_pdf_path and os.path.exists(temp_pdf_path):
+            os.remove(temp_pdf_path)

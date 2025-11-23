@@ -4,8 +4,6 @@ from app.api.libros.services import (agregar_libro_service, actualizar_libro_met
 from app.api.exceptions import ServiceError, NotFoundError
 import os
 
-from app.api.libros.utils import _ejecutar_plan_filesystem, _limpiar_temporales_en_fallo
-
 def agregar_libro(data,archivo_pdf):
     try:
         nuevo_libro = agregar_libro_service(data,archivo_pdf)
@@ -28,18 +26,17 @@ def obtener_libro_por_id(id_libro):
     """
     try:
         libro = obtener_libro_service(id_libro)
-        # GET no necesita commit, solo devuelve el "sobre"
+  
         return {
             'mensaje': 'Libro obtenido correctamente',
             'libro': libro
         }
     except Exception as e:
-        # Vuelve a lanzar para que el Resource lo maneje
         raise e
     
 def actualizar_libro(id_libro, data):
     try:
-        libro_actualizado, plan_filesystem = actualizar_libro_metadata_service(id_libro, data)
+        libro_actualizado = actualizar_libro_metadata_service(id_libro, data)
         db.session.commit()
 
         return {"mensaje":"Libro actualizado correctamente","libro":libro_actualizado}, 200
@@ -49,7 +46,7 @@ def actualizar_libro(id_libro, data):
 
 def actualizar_archivo_libro(id_libro, archivo_pdf):
     try:
-        libro_actualizado, plan_filesystem = actualizar_libro_archivo_service(id_libro, archivo_pdf)
+        libro_actualizado = actualizar_libro_archivo_service(id_libro, archivo_pdf)
         db.session.commit()
         respuesta =  {'mensaje': 'Archivo y portada actualizados correctamente',
             'libro': libro_actualizado}

@@ -28,14 +28,3 @@ class Autores(db.Model):
             "slug_autor": self.slug_autor,
         }
 
-    # def to_dict(self, include_libros=True):
-    #     data = {
-    #         "id_autor": self.id_autor,
-    #         "nombre_completo": self.nombre_completo,
-    #         "nacionalidad": self.nacionalidad,
-    #         "slug_autor": self.slug_autor,
-    #     }
-    #     if include_libros:
-    #         data["libros"] = [libro.to_dict(
-    #             include_autores=False) for libro in self.libros]
-    #     return data

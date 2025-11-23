@@ -32,14 +32,9 @@ def agregar_carrera_service(data):
         raise ServiceError(f"Error al crear carrera: {e}")
 
 
-def leer_carreras_service():
-    try:
+def listar_carreras_service():
         carreras = Carreras.query.order_by(Carreras.id_carrera.asc()).all()
-        return [carrera.to_dict() for carrera in carreras]
-    except Exception as e:
-        db.session.rollback()
-        raise ServiceError(f"Error al leer carreras: {e}")
-
+        return [carrera.to_dict_basic() for carrera in carreras]
 
 def actualizar_carrera_service(id_carrera, data):
     carrera = Carreras.query.get(id_carrera)

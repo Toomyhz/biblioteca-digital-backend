@@ -1,7 +1,7 @@
 from unittest.mock import patch
 from flask import redirect
 
-def test_usuario_actual_logueado(client, login_as):
+def test_usuario_actual_logueado(client, login_as, mocker):
     login_as("usuario")
     response = client.get("/api/auth/me/")
     json_data = response.get_json()
@@ -10,8 +10,8 @@ def test_usuario_actual_logueado(client, login_as):
         "is_authenticated":True,
         "user":{
             "id":"1",
-            "correo_institucional":"tomas.hernandez@umce.cl",
-            "nombre_usuario":"Tomás Hernández",
+            "correo_institucional":"test@umce.cl",
+            "nombre_usuario":"Test_Nombre Test_Apellido",
             "foto_perfil":"foto_perfil_test.png",
             "rol":"usuario"
         }

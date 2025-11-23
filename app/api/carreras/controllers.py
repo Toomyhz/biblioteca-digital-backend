@@ -7,7 +7,7 @@ from app.api.carreras.services import (
     agregar_carrera_service,
     actualizar_carrera_service,
     eliminar_carrera_service,
-    leer_carreras_service,
+    listar_carreras_service,
 )
 from app.extensions import db
 
@@ -39,7 +39,7 @@ def validar_id_carrera(id_carrera: str) -> int:
 @safe_controller
 def listar_carreras():
     """Listar todas las carreras."""
-    carreras  = leer_carreras_service()
+    carreras  = listar_carreras_service()
     return {"data":carreras}
 
 

@@ -1,6 +1,6 @@
 from flask import request
 from sqlalchemy import func,or_
-from app.models.libros import Libros
+from app.models.libros import Libros, libros_autores, libros_carreras
 from app.models.autores import Autores
 from app.models.carreras import Carreras
 from app import db
@@ -44,17 +44,19 @@ def listar_libros_biblioteca():
                 Libros.carreras.any(Carreras.id_carrera.in_(carreras_filtro))
             )
         
-
         if autores_filtro:
             query = query.filter(
-                Libros.autores.any(Autores.id_autor.in_(autores_filtro))
+                Libros.autores.any(Autores.slug_autor.in_(autores_filtro))
             )
+    
+        query = query.filter(
+            Libros.estado == 'disponible'
+        )
 
         #  ---- Paginacion -----
         paginacion = query.order_by(Libros.id_libro.desc()).paginate(
             page = pagina, per_page=limite, error_out=False
         )
-
         libros = [libro.to_dict() for libro in paginacion.items]
          # ----- Carreras visibles (máximo 7) -----
         carreras_visibles = (
@@ -120,3 +122,30 @@ def listar_libros_biblioteca():
     except Exception as e:
         db.session.rollback()
         return {'error': f'Error al listar libros: {str(e)}'}, 500
+    
+def diccionario_catalogo_service():
+    # Carreras que tienen al menos un libro
+    carreras = (
+        db.session.query(Carreras.id_carrera, Carreras.nombre_carrera, Carreras.slug_carrera)
+        .join(libros_carreras, Carreras.id_carrera == libros_carreras.c.id_carrera)
+        .distinct()
+        .order_by(Carreras.nombre_carrera.asc())
+        .all()
+    )
+
+    # Autores que tienen al menos un libro
+    autores = (
+        db.session.query(Autores.id_autor, Autores.nombre_completo, Autores.slug_autor,)
+        .join(libros_autores, Autores.id_autor == libros_autores.c.id_autor)
+        .distinct()
+        .order_by(Autores.nombre_completo.asc())
+        .all()
+    )
+    return {
+        "carreras": [
+            {"id_carrera": c[0], "nombre_carrera": c[1], "slug_carrera": c[2]} for c in carreras
+        ],
+        "autores": [
+            {"id_autor": a[0], "nombre_completo": a[1], "slug_autor": a[2]} for a in autores
+        ],
+    }, 200

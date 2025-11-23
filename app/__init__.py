@@ -6,6 +6,7 @@ from app.api.exceptions import NotFoundError, RegistroExistenteError
 
 def create_app(config_class=None, testing: bool = False):
     app = Flask(__name__)
+
     
     # Configuración
     if testing:
@@ -16,7 +17,7 @@ def create_app(config_class=None, testing: bool = False):
         app.config.from_object(config_class)
     
     # Inicializar extensiones
-    server_session(app)
+  
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -29,7 +30,6 @@ def create_app(config_class=None, testing: bool = False):
     if tns:
         os.environ["TNS_ADMIN"] = tns
 
-    # Conexión DB en desarrollo
     if not app.config.get("TESTING", False):
         with app.app_context():
             from sqlalchemy import text
@@ -38,10 +38,9 @@ def create_app(config_class=None, testing: bool = False):
             except Exception as e:
                 app.logger.error(f"Error al conectar a Oracle: {e}")
                 raise
+        server_session.init_app(app)
     else:
-        # Crear tablas para tests automáticamente
-        with app.app_context():
-            db.create_all()
+        pass # En testing, las pruebas manejarán la configuración de la DB
     
     # Registrar Namespaces
     from app.api.libros.routes import libros_sn

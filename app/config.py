@@ -75,36 +75,40 @@ class DevelopmentConfig(Config):
 
     FRONT_URL=os.getenv("FRONTEND_URL")
 
+
     
     
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'oracle+oracledb://test_biblioteca:Biblioteca.2025@localhost:1521/?service_name=XEPDB1'
+    DEBUG = True
+    
+    # --- 1. ARREGLO DE BASE DE DATOS ---
+    # Usamos SQLite en memoria para que SQLAlchemy no busque el puerto 1521.
+    # Como usaremos Mocks, esta DB nunca se usará realmente.
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
-    WTF_CSRF_ENABLED = False
+    
+    # --- 2. ARREGLO DE SECRETOS (Valores Fijos) ---
+    # Usamos valores fijos para que los tests sean reproducibles siempre
+    SECRET_KEY = "clave_secreta_para_test"
+    WTF_CSRF_ENABLED = False # Importante: Desactivar CSRF facilita los tests de POST
 
-    SECRET_KEY = os.getenv("SECRET_KEY")
 
-    # Sesiones, revisar
-    SESSION_TYPE = 'redis'
-    SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
-    SESSION_PERMANENT = False
-    SESSION_USE_SIGNER = True
-    SESSION_KEY_PREFIX = 'sess:'  # opcional
-
+    
+    # Configuración de Cookies
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
-    PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+    SESSION_COOKIE_SECURE = False # False porque en test no soleres usar HTTPS
+    PERMANENT_SESSION_LIFETIME = 3600
     SESSION_REFRESH_EACH_REQUEST = False
 
+    # --- 4. ARREGLO DE OAUTH (Valores Falsos) ---
+    GOOGLE_CLIENT_ID = "dummy_client_id"
+    GOOGLE_CLIENT_SECRET = "dummy_client_secret"
+    OAUTH_REDIRECT_URI = "http://localhost:5000/callback"
+    ALLOWED_EMAIL_DOMAINS = "umce.cl"
 
-    # Configuración de Google OAuth
-    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-    OAUTH_REDIRECT_URI = os.getenv("OAUTH_REDIRECT_URI")
-    ALLOWED_EMAIL_DOMAINS = os.getenv("ALLOWED_EMAIL_DOMAINS")
-
-    # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
-    REDIS_URL=os.getenv("REDIS_URL")
+    LOGIN_DISABLED = False  # Asegura que Flask-Login no esté deshabilitado
+    FRONT_URL="http://localhost:5173"
 

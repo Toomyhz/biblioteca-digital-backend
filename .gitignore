@@ -4,3 +4,12 @@ __pycache__/
 wallet_oracle/
 venv/
 .venv
+
+# SonarQube
+.sonar/
+.scannerwork/
+
+# Reportes de cobertura (tampoco se suben)
+coverage.xml
+.coverage
+htmlcov/

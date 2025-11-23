@@ -9,7 +9,7 @@ from .utils import DigitalOceanSpaces
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
-server_session = Session
+server_session = Session()
 api_new = Api(
     version="1.0",
     title="Biblioteca Digital - API",
