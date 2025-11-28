@@ -3,7 +3,17 @@ from sqlalchemy import func,or_
 from app.models.libros import Libros, libros_autores, libros_carreras
 from app.models.autores import Autores
 from app.models.carreras import Carreras
+import unicodedata
+import re
 from app import db
+
+def normalizar_busqueda(texto: str) -> str:
+    texto_normalizado = unicodedata.normalize("NFD", texto)
+    sin_acentos = re.sub(r'[\u0300-\u036f]', '', texto_normalizado)
+    resultado = sin_acentos.lower()
+    return resultado
+
+
 def listar_libros_biblioteca():
     try:
         # ----- Parámetros -----
@@ -17,7 +27,7 @@ def listar_libros_biblioteca():
 
         # ---- Filtros -----
         if busqueda:
-            busqueda_normalizada = busqueda.strip().lower()
+            busqueda_normalizada = normalizar_busqueda(busqueda)
             busqueda_patron = f"%{busqueda_normalizada}%"
             query = query.filter(
                 or_(
