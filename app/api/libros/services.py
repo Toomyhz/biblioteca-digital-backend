@@ -1,16 +1,10 @@
 from app.extensions import cloud_storage, db
-from app.config import Config
 from app.models.carreras import Carreras
 from app.models.libros import Libros
 from app.models.autores import Autores
 from app.api.utils.helpers import generar_slug
-
-from sqlalchemy import or_, text, func, literal
-import os
-from app.api.exceptions import NotFoundError, ServiceError
-import fitz
-import io
-import tempfile
+from sqlalchemy import or_, func, literal
+from app.api.exceptions import NotFoundError
 from app.api.libros.utils import procesar_pdf_y_subir
 
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -191,3 +185,20 @@ def eliminar_libro_service(id_libro):
 
     db.session.delete(libro)
     return libro
+
+def obtener_libro_reciente_service(limite):
+    """Servicio para obtener los libros más recientes agregados."""
+    libros = (
+        Libros.query.order_by(Libros.fecha_creacion.asc()
+    ).limit(limite).all())
+
+    return libros
+
+def obtener_libro_mas_visualizado_service(limite):
+    """Servicio para obtener el libro más visualizado(clickeado)."""
+    libro=(
+        Libros.query.order_by(Libros.visualizaciones.desc()
+    ).limit(limite).all())
+    
+    return libro
+    

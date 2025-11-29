@@ -5,7 +5,7 @@ from flask import request
 from .models import register_libro_models
 from app.api.exceptions import NotFoundError, ServiceError
 
-from .controllers import actualizar_libro,agregar_libro,eliminar_libro,listar_libros, actualizar_archivo_libro, obtener_libro_por_id
+from .controllers import actualizar_libro,agregar_libro,eliminar_libro,listar_libros, actualizar_archivo_libro, obtener_libro_por_id, obtener_libros_recientes
 
 # Namespace
 libros_sn = Namespace('libros',description="Operaciones relacionadas con libros")
@@ -25,6 +25,20 @@ libro_parser.add_argument('pdf', type=FileStorage, required=True, location='file
 archivo_parser = libros_sn.parser()
 archivo_parser.add_argument("pdf",type=FileStorage,required=True,location="files",help="Archivo PDF del libro")
 
+@libros_sn.route("/top")
+class LibrosTop(Resource):
+
+    @libros_sn.doc("top_books")
+    @libros_sn.param("limite", "Cantidad de libros a devolver", type=int, default=6)
+    @libros_sn.marshal_with(models["libro_reciente_response"])  # reutiliza el modelo de lista
+    def get(self):
+        """Obtener los libros más recientes"""
+        limite = request.args.get("limite", 6, type=int)
+
+        try:
+            return obtener_libros_recientes(limite)
+        except Exception as e:
+            libros_sn.abort(500, f"Error al obtener libros top: {str(e)}")
 
 # "Resource" para la colección
 @libros_sn.route("/")

@@ -11,7 +11,9 @@ diccionario_libro = {
     "ids_carreras": "Lista de IDs de carreras",
     "archivo_pdf": "Ruta al PDF del libro",
     "archivo_portada": "Ruta a la portada del libro",
-    "slug_titulo": "Slug del libro"
+    "slug_titulo": "Slug del libro",
+    "visualizaciones": "Número de clicks hechos en el libro",
+    "fecha_creacion": "Fecha de creación del libro"
 }
 
 
@@ -99,10 +101,16 @@ def register_libro_models(api):
         "archivo_pdf": fields.String(description=diccionario_libro["archivo_pdf"]),
         "archivo_portada": fields.String(description=diccionario_libro["archivo_portada"]),
         "slug_titulo": fields.String(description=diccionario_libro["slug_titulo"]),
+        "fecha_creacion": fields.String(description=diccionario_libro["fecha_creacion"]),
+        "visualizaciones": fields.Integer(description=diccionario_libro["visualizaciones"]),
         "autores": fields.List(fields.Nested(autor_nested)),
         "carreras": fields.List(fields.Nested(carrera_nested))
     })
 
+    libro_reciente_response = api.model('LibrosRecientesResponse', {
+        "mensaje": fields.String(description="Mensaje de respuesta"),
+        "data": fields.List(fields.Nested(libro))
+    })
 
     response = api.model('LibroResponse', {  
         'mensaje': fields.String(example='Operación exitosa'),
@@ -132,5 +140,6 @@ def register_libro_models(api):
         'single': libro,
         'response': response,
         'list': lista,
+        'libro_reciente_response': libro_reciente_response,
         'error': error,
     }
