@@ -1,10 +1,12 @@
 from flask import Blueprint, send_from_directory, current_app, jsonify, redirect
 from app.extensions import cloud_storage
 from app.models.libros import Libros
-
+from app.api.auth.access_control import roles_required
 uploads_bp = Blueprint('uploads', __name__)
 
+    
 @uploads_bp.route('/leer/<int:id_libro>')
+@roles_required("admin", "usuario")
 def get_presigned_url(id_libro):
     """
     Sirve un archivo PDF.

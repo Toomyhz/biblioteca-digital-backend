@@ -73,7 +73,7 @@ def obtener_libros_recientes(limite=6):
         libros = obtener_libro_reciente_service(limite)
         data = [libro.to_dict() for libro in libros]
         return {
-            'data': data,  # Serializar los libros
+            'data': data, 
         }
     except Exception as e:
         raise ServiceError(f"Error al obtener libros recientes: {e}")
@@ -84,7 +84,7 @@ def obtener_libros_mas_visualizados(limite=6):
         libros = obtener_libro_mas_visualizado_service(limite)
         data = [libro.to_dict() for libro in libros]
         return {
-            'data': data,  # Serializar los libros
+            'data': data, 
         }
     except Exception as e:
         raise ServiceError(f"Error al obtener libros más visualizados: {e}")

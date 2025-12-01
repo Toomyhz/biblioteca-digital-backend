@@ -7,6 +7,8 @@ from app.api.exceptions import NotFoundError, ServiceError
 
 from .controllers import actualizar_libro,agregar_libro,eliminar_libro,listar_libros, actualizar_archivo_libro, obtener_libro_por_id, obtener_libros_recientes
 
+from app.api.auth.access_control import roles_required
+
 # Namespace
 libros_sn = Namespace('libros',description="Operaciones relacionadas con libros")
 models = register_libro_models(libros_sn)
@@ -28,9 +30,10 @@ archivo_parser.add_argument("pdf",type=FileStorage,required=True,location="files
 @libros_sn.route("/top")
 class LibrosTop(Resource):
 
+    @roles_required("admin", "usuario")
     @libros_sn.doc("top_books")
     @libros_sn.param("limite", "Cantidad de libros a devolver", type=int, default=6)
-    @libros_sn.marshal_with(models["libro_reciente_response"])  # reutiliza el modelo de lista
+    @libros_sn.marshal_with(models["libro_reciente_response"]) 
     def get(self):
         """Obtener los libros más recientes"""
         limite = request.args.get("limite", 6, type=int)
@@ -43,7 +46,7 @@ class LibrosTop(Resource):
 # "Resource" para la colección
 @libros_sn.route("/")
 class LibroList(Resource):
-
+    @roles_required("admin", "usuario")
     @libros_sn.doc("list_books")
     @libros_sn.param("pagina", "Número de página", type=int, default=1)
     @libros_sn.param("limite", "Resultados por página", type=int, default=10)
@@ -59,6 +62,7 @@ class LibroList(Resource):
         except Exception as e:
             libros_sn.abort(500, f"Error al listar libros: f{str(e)}")
     
+    @roles_required("admin")
     @libros_sn.doc("create_book")
     @libros_sn.expect(libro_parser)
     @libros_sn.marshal_with(models["response"], code=201)
@@ -80,7 +84,7 @@ class LibroList(Resource):
 @libros_sn.route("/<int:id_libro>")
 @libros_sn.param("id_libro", "El identificador del libro")
 class Libro(Resource):
-
+    @roles_required("admin", "usuario")
     @libros_sn.doc("get_book_by_id")
     @libros_sn.marshal_with(models["response"]) # Reutiliza tu modelo de respuesta
     @libros_sn.response(404, 'Libro no encontrado', models["error"])
@@ -94,6 +98,7 @@ class Libro(Resource):
         except Exception as e:
             libros_sn.abort(500, str(e))
 
+    @roles_required("admin")
     @libros_sn.doc("update_book_metadata")
     @libros_sn.expect(models["update"],validate=True)
     @libros_sn.marshal_with(models["response"])
@@ -110,7 +115,7 @@ class Libro(Resource):
             libros_sn.abort(500, str(e))
         
             
-
+    @roles_required("admin")
     @libros_sn.doc("delete_book")
     @libros_sn.marshal_with(models["response"])
     def delete(self, id_libro):
@@ -128,6 +133,7 @@ class Libro(Resource):
 @libros_sn.param("id_libro","El ID del libro")
 class LibroArchivoResource(Resource):
     
+    @roles_required("admin")
     @libros_sn.doc("update_book_file")
     @libros_sn.expect(archivo_parser)
     @libros_sn.marshal_with(models["response"], code=200)

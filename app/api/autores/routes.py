@@ -11,6 +11,7 @@ models = register_autor_models(autores_sn)
 # "Resource" para la colección
 @autores_sn.route("/")
 class AutorList(Resource):
+    @roles_required("admin", "usuario")
     @autores_sn.doc("list_autores")
     @autores_sn.param(
     "busqueda",
@@ -24,6 +25,7 @@ class AutorList(Resource):
         busqueda = request.args.get("busqueda", type=str)
         return listar_autores(busqueda)
     
+    @roles_required("admin")
     @autores_sn.doc("create_autor")
     @autores_sn.expect(models["input"],validate=True)
     @autores_sn.marshal_with(models["response"])
@@ -36,6 +38,7 @@ class AutorList(Resource):
 @autores_sn.route("/<int:id_autor>")
 @autores_sn.param("id_autor", "El identificador del autor")
 class Autor(Resource):
+    @roles_required("admin")
     @autores_sn.doc("update_autor")
     @autores_sn.expect(models["update"])
     @autores_sn.marshal_with(models["response"])
@@ -45,6 +48,7 @@ class Autor(Resource):
         id_autor = str(id_autor)
         return actualizar_autor(id_autor,data)
 
+    @roles_required("admin")
     @autores_sn.doc("delete_autor")
     @autores_sn.marshal_with(models["response"])
     def delete(self, id_autor):
