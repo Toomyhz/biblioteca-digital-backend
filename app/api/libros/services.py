@@ -188,10 +188,13 @@ def eliminar_libro_service(id_libro):
 
 def obtener_libro_reciente_service(limite):
     """Servicio para obtener los libros más recientes agregados."""
-    libros = (
-        Libros.query.order_by(Libros.fecha_creacion.asc()
-    ).limit(limite).all())
+    query = (
+        Libros.query
+        .filter(Libros.estado == 'disponible') 
+        .order_by(Libros.fecha_creacion.desc())  
+    )
 
+    libros = query.limit(limite).all()
     return libros
 
 def obtener_libro_mas_visualizado_service(limite):

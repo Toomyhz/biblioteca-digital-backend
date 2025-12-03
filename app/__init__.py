@@ -25,10 +25,6 @@ def create_app(config_class=None, testing: bool = False):
     redis_client.init_app(app)
     cloud_storage.init_app(app)
 
-    # Configuración Oracle
-    tns = app.config.get("TNS_ADMIN")
-    if tns:
-        os.environ["TNS_ADMIN"] = tns
 
     if not app.config.get("TESTING", False):
         with app.app_context():

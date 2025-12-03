@@ -60,12 +60,12 @@ class DevelopmentConfig(Config):
     SESSION_REDIS = redis.from_url(os.getenv("REDIS_URL"))
     SESSION_PERMANENT = False
     SESSION_USE_SIGNER = True
-    SESSION_KEY_PREFIX = 'sess:'  # opcional
+    SESSION_KEY_PREFIX = 'sess:'  
 
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
-    SESSION_COOKIE_SECURE = False  # True en producción bajo HTTPS
-    PERMANENT_SESSION_LIFETIME = 7200  # Ajustado a 2 horas
+    SESSION_COOKIE_SECURE = False  
+    PERMANENT_SESSION_LIFETIME = 7200  
     SESSION_REFRESH_EACH_REQUEST = False
 
     # Configuracion Redis (Se está utilizando el mismo espacio para las sesiones).
